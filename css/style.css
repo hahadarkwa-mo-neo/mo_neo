@@ -115,6 +115,18 @@ body {
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
+  transition: box-shadow 0.5s ease;
+}
+
+/* Turn border glow - pulses when it's your turn */
+#app.your-turn-glow {
+  box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.15), inset 0 0 60px rgba(0, 212, 255, 0.05);
+  animation: turnBorderGlow 2s ease-in-out infinite;
+}
+
+@keyframes turnBorderGlow {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.1), inset 0 0 40px rgba(0, 212, 255, 0.03); }
+  50% { box-shadow: inset 0 0 35px rgba(0, 212, 255, 0.2), inset 0 0 70px rgba(0, 212, 255, 0.08); }
 }
 
 @media (min-width: 769px) {
@@ -404,6 +416,38 @@ input[type="range"]::-moz-range-thumb {
 
 .sound-toggle:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Fullscreen button */
+.fullscreen-btn {
+  position: absolute;
+  top: 20px;
+  right: 72px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-glass);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background var(--transition-fast);
+  color: white;
+}
+
+.fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Hide fullscreen btn on desktop (not needed) */
+@media (min-width: 769px) and (hover: hover) {
+  .fullscreen-btn { display: none; }
 }
 
 /* ============================================================
@@ -959,12 +1003,12 @@ input[type="range"]::-moz-range-thumb {
   display: none;
 }
 
-/* Action Buttons (Smooth opening/sliding) */
+/* Action Buttons - Fixed action bar, always visible */
 .action-buttons {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0;
+  gap: 10px;
   padding: 0 16px;
   width: 100%;
   margin-top: -5px;
@@ -1004,45 +1048,54 @@ input[type="range"]::-moz-range-thumb {
 
 #play-btn {
   display: block;
-  opacity: 0;
-  pointer-events: none;
-  max-width: 0;
-  padding: 12px 0;
-  margin: 0;
-  overflow: hidden;
+  flex: 0 1 200px;
+  padding: 12px 24px;
   border: none;
   border-radius: 12px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 800;
   color: white;
-  background: linear-gradient(135deg, var(--neon-green), #00b368);
-  cursor: pointer;
+  background: linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.3));
+  cursor: not-allowed;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 3px 15px rgba(0, 255, 136, 0.3);
+  box-shadow: none;
   white-space: nowrap;
   letter-spacing: 0.5px;
+  opacity: 0.4;
+  overflow: hidden;
 }
 
 #play-btn.visible {
   opacity: 1;
   pointer-events: auto;
-  max-width: 220px;
-  padding: 12px 24px;
-  margin-left: 12px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--neon-green), #00b368);
+  box-shadow: 0 3px 15px rgba(0, 255, 136, 0.3);
 }
 
-#play-btn:hover:not(:disabled) {
+#play-btn.visible.ready-pulse {
+  animation: readyPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes readyPulse {
+  0%, 100% { box-shadow: 0 3px 15px rgba(0, 255, 136, 0.3); transform: scale(1); }
+  50% { box-shadow: 0 6px 25px rgba(0, 255, 136, 0.6), 0 0 15px rgba(0, 255, 136, 0.2); transform: scale(1.03); }
+}
+
+#play-btn.visible:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
+  animation: none;
 }
 
-#play-btn:active:not(:disabled) {
+#play-btn.visible:active:not(:disabled) {
   transform: translateY(1px) scale(0.98);
+  animation: none;
 }
 
 #play-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -2731,4 +2784,338 @@ input[type="range"]::-moz-range-thumb {
     padding: 12px 24px !important;
     font-size: 16px !important;
   }
+}
+
+/* ============================================================
+   CARD PREVIEW OVERLAY (Long Press)
+   ============================================================ */
+.card-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease;
+  cursor: pointer;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.card-preview-large {
+  width: 180px;
+  height: 260px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 212, 255, 0.2);
+  animation: cardPreviewIn 0.3s cubic-bezier(0.25, 1, 0.4, 1);
+  pointer-events: none;
+}
+
+@keyframes cardPreviewIn {
+  from { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.card-preview-emoji {
+  font-size: 64px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.card-preview-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: white;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 8px;
+}
+
+.card-preview-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 8px;
+}
+
+/* ============================================================
+   MOBILE HAND CARDS - Horizontal Scroll
+   ============================================================ */
+@media (max-width: 768px) {
+  .hand-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: calc(8px + var(--safe-bottom));
+  }
+
+  #hand-cards {
+    overflow-x: auto;
+    overflow-y: visible;
+    justify-content: flex-start;
+    padding: 12px 20px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #hand-cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  #hand-cards .card {
+    flex-shrink: 0;
+    margin-left: -25px;
+    scroll-snap-align: center;
+  }
+
+  #hand-cards .card:first-child {
+    margin-left: 0;
+  }
+
+  .action-buttons {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  #draw-btn {
+    flex: 1;
+    padding: 11px 16px;
+    font-size: 14px;
+  }
+
+  #play-btn {
+    flex: 1;
+    padding: 11px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Desktop turn glow enhancement */
+@media (min-width: 769px) {
+  #app.your-turn-glow {
+    border-color: rgba(0, 212, 255, 0.3);
+    box-shadow: 
+      0 30px 80px rgba(0, 0, 0, 0.8), 
+      0 0 50px rgba(124, 58, 237, 0.15),
+      inset 0 0 30px rgba(0, 212, 255, 0.12),
+      inset 0 0 60px rgba(0, 212, 255, 0.04),
+      0 0 20px rgba(0, 212, 255, 0.1);
+    animation: turnBorderGlowDesktop 2s ease-in-out infinite;
+  }
+
+  @keyframes turnBorderGlowDesktop {
+    0%, 100% { 
+      border-color: rgba(0, 212, 255, 0.2);
+      box-shadow: 
+        0 30px 80px rgba(0, 0, 0, 0.8), 
+        0 0 50px rgba(124, 58, 237, 0.15),
+        inset 0 0 20px rgba(0, 212, 255, 0.08),
+        inset 0 0 40px rgba(0, 212, 255, 0.03),
+        0 0 15px rgba(0, 212, 255, 0.08);
+    }
+    50% { 
+      border-color: rgba(0, 212, 255, 0.4);
+      box-shadow: 
+        0 30px 80px rgba(0, 0, 0, 0.8), 
+        0 0 50px rgba(124, 58, 237, 0.15),
+        inset 0 0 35px rgba(0, 212, 255, 0.18),
+        inset 0 0 70px rgba(0, 212, 255, 0.06),
+        0 0 25px rgba(0, 212, 255, 0.15);
+    }
+  }
+}
+
+/* ============================================================
+   B1: SWIPE DROP ZONE & CARD DRAGGING
+   ============================================================ */
+.swipe-drop-zone {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 80px;
+  border-radius: 20px;
+  border: 2px dashed rgba(0, 255, 136, 0.3);
+  background: rgba(0, 255, 136, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.swipe-drop-zone.active {
+  opacity: 1;
+}
+
+.swipe-drop-zone.ready {
+  border-color: rgba(0, 255, 136, 0.8);
+  background: rgba(0, 255, 136, 0.12);
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.drop-zone-text {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(0, 255, 136, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: color 0.2s ease;
+}
+
+.swipe-drop-zone.ready .drop-zone-text {
+  color: var(--neon-green);
+}
+
+/* Card being dragged */
+#hand-cards .card.dragging {
+  z-index: 200;
+  transition: none !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 136, 0.3);
+  opacity: 0.9;
+}
+
+#hand-cards .card.swipe-invalid {
+  animation: swipeReject 0.4s ease;
+}
+
+@keyframes swipeReject {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateX(-8px) rotate(-2deg); }
+  40% { transform: translateX(8px) rotate(2deg); }
+  60% { transform: translateX(-5px) rotate(-1deg); }
+  80% { transform: translateX(5px) rotate(1deg); }
+}
+
+/* ============================================================
+   B2: CAT PAIR MAGNET ANIMATION
+   ============================================================ */
+.card.magnet-fly {
+  position: fixed !important;
+  z-index: 9999 !important;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.4, 1) !important;
+  pointer-events: none !important;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5), 0 0 20px rgba(124, 58, 237, 0.3) !important;
+}
+
+.card.magnet-glow {
+  animation: magnetGlow 0.6s ease-in-out;
+}
+
+@keyframes magnetGlow {
+  0% { box-shadow: var(--shadow-card); }
+  50% { box-shadow: 0 0 25px rgba(124, 58, 237, 0.6), 0 0 50px rgba(124, 58, 237, 0.3); }
+  100% { box-shadow: var(--shadow-card); }
+}
+
+/* ============================================================
+   B5: CARD COMBO HINT
+   ============================================================ */
+#hand-cards .card.combo-hint {
+  animation: comboHintPulse 0.8s ease-in-out infinite;
+  border-color: var(--neon-yellow) !important;
+}
+
+@keyframes comboHintPulse {
+  0%, 100% { 
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    transform: translateY(-4px);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.2);
+    transform: translateY(-8px);
+  }
+}
+
+/* ============================================================
+   B6: TURN FLASH OVERLAY
+   ============================================================ */
+.turn-flash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  font-size: 24px;
+  font-weight: 900;
+  text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+  letter-spacing: 2px;
+}
+
+.turn-flash-overlay.flash-your-turn {
+  animation: turnFlashIn 1.2s ease forwards;
+  color: var(--neon-cyan);
+  background: radial-gradient(ellipse at center, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+}
+
+.turn-flash-overlay.flash-attack {
+  animation: turnFlashIn 1.5s ease forwards;
+  color: var(--neon-pink);
+  background: radial-gradient(ellipse at center, rgba(255, 46, 99, 0.1) 0%, transparent 70%);
+}
+
+@keyframes turnFlashIn {
+  0% { opacity: 0; transform: scale(0.5); }
+  15% { opacity: 1; transform: scale(1.1); }
+  30% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* ============================================================
+   B8: DANGER INDICATOR TEXT
+   ============================================================ */
+.danger-text {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: dangerTextPulse 1s ease-in-out infinite;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.danger-text.medium {
+  color: var(--neon-yellow);
+}
+
+.danger-text.high {
+  color: var(--neon-pink);
+}
+
+@keyframes dangerTextPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.deck-pile.danger-extreme {
+  animation: dangerShake 0.5s ease-in-out infinite;
+}
+
+@keyframes dangerShake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
 }

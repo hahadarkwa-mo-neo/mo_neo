@@ -202,6 +202,7 @@ const Game = {
     this.selectedCards = [];
     this.isProcessing = false;
 
+    UI._turnFlashShown = false; // Reset turn flash for new turn
     UI.renderAll();
     UI.highlightCurrentPlayer();
 
@@ -224,6 +225,7 @@ const Game = {
 
     const cardIdx = this.selectedCards.indexOf(cardId);
     if (cardIdx >= 0) {
+      // Deselect card
       this.selectedCards.splice(cardIdx, 1);
     } else {
       const card = this.currentPlayer.hand.find(c => c.id === cardId);
@@ -239,35 +241,24 @@ const Game = {
       ].includes(card.type);
 
       if (isSinglePlayable) {
-        // Play single card immediately!
+        // Select single card (no auto-play, wait for confirm)
         this.selectedCards = [cardId];
-        UI.renderHand();
-        UI.updateActionButtons();
-        this.playSelectedCards();
-        return;
-      }
-
-      // Check if it's a cat card
-      if (isCatCard(card.type)) {
-        // Find if we already have one cat card of the SAME type selected
+      } else if (isCatCard(card.type)) {
+        // Check if we already have one cat card of the SAME type selected
         const sameTypeSelected = this.selectedCards.filter(id => {
           const c = this.currentPlayer.hand.find(cc => cc.id === id);
           return c && c.type === card.type;
         });
 
         if (sameTypeSelected.length === 1) {
-          // We now have a pair! Select both and play immediately!
+          // We now have a pair! Select both (no auto-play, wait for confirm)
           this.selectedCards = [sameTypeSelected[0], cardId];
-          UI.renderHand();
-          UI.updateActionButtons();
-          this.playSelectedCards();
-          return;
         } else {
           // Just select this cat card
           this.selectedCards = [cardId];
         }
       } else {
-        // For other unplayable cards (like DEFUSE, NOPE when not reactive, etc.), just select it normally
+        // For other cards (DEFUSE, NOPE, etc.), just select it normally
         this.selectedCards = [cardId];
       }
     }

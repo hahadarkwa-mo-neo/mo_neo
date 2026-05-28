@@ -14,6 +14,7 @@
   <div id="app">
     <!-- Sound Toggle (global) -->
     <button id="sound-toggle" class="sound-toggle" title="Tắt/Bật âm thanh">🔊</button>
+    <button id="fullscreen-btn" class="fullscreen-btn" title="Toàn màn hình">⛶</button>
 
     <!-- ===== MENU SCREEN (Mode Selector) ===== -->
     <div id="menu-screen" class="screen active">
@@ -196,6 +197,14 @@
     <div id="game-screen" class="screen">
       <!-- Turn Indicator -->
       <div id="turn-indicator" class="turn-indicator">🎮 Chuẩn bị...</div>
+
+      <!-- Turn Flash Overlay -->
+      <div id="turn-flash" class="turn-flash-overlay"></div>
+
+      <!-- Swipe Drop Zone -->
+      <div id="swipe-drop-zone" class="swipe-drop-zone">
+        <span class="drop-zone-text">↑ Thả để đánh</span>
+      </div>
 
       <!-- Player Info Corner (Bottom Left) -->
       <div id="player-info" class="player-info-corner"></div>

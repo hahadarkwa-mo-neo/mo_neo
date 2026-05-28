@@ -61,6 +61,10 @@ const UI = {
       readyBtn: document.getElementById('ready-btn'),
       startOnlineBtn: document.getElementById('start-online-btn'),
       connectionStatus: document.getElementById('connection-status'),
+      // B1-B8 new elements
+      fullscreenBtn: document.getElementById('fullscreen-btn'),
+      turnFlash: document.getElementById('turn-flash'),
+      swipeDropZone: document.getElementById('swipe-drop-zone'),
     };
   },
 
@@ -80,6 +84,7 @@ const UI = {
     if (this.els.offlinePanel) this.els.offlinePanel.style.display = 'none';
     this.setupMenuEvents();
     this.setupModeSelectEvents();
+    this.setupFullscreen();
   },
 
   _hideAllScreens() {
@@ -377,17 +382,116 @@ const UI = {
         el.classList.add('selected');
       }
 
-      el.onclick = () => {
+      // B5: Combo hint - highlight matching cat cards
+      if (Game.selectedCards.length === 1 && !isSelected) {
+        const selectedCard = player.hand.find(c => c.id === Game.selectedCards[0]);
+        if (selectedCard && isCatCard(selectedCard.type) && card.type === selectedCard.type) {
+          el.classList.add('combo-hint');
+        }
+      }
+
+      // Tap to select/deselect
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (this._longPressTriggered || this._swipeActive) {
+          this._longPressTriggered = false;
+          this._swipeActive = false;
+          return;
+        }
         if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+          this.haptic(10);
           Sounds.click();
           Game.selectCard(card.id);
         }
       };
 
+      // Long press to preview (mobile)
+      el.addEventListener('touchstart', (e) => {
+        this._longPressTriggered = false;
+        this._swipeActive = false;
+        this._swipeStartY = e.touches[0].clientY;
+        this._swipeStartX = e.touches[0].clientX;
+        this._swipeCardEl = el;
+        this._swipeCard = card;
+        this._swipeOrigTransform = el.style.transform;
+
+        this._longPressTimer = setTimeout(() => {
+          this._longPressTriggered = true;
+          this.haptic(15);
+          this.showCardPreview(card);
+        }, 500);
+      }, { passive: true });
+
+      // B1: Swipe gesture
+      el.addEventListener('touchmove', (e) => {
+        clearTimeout(this._longPressTimer);
+        if (this._longPressTriggered) return;
+
+        const dy = this._swipeStartY - e.touches[0].clientY;
+        const dx = Math.abs(e.touches[0].clientX - this._swipeStartX);
+
+        // Only activate vertical swipe if vertical movement > horizontal
+        if (dy > 15 && dy > dx) {
+          this._swipeActive = true;
+          el.classList.add('dragging');
+
+          // Move card up with finger
+          el.style.transform = `translateY(${-dy}px) scale(1.05)`;
+
+          // Show/update drop zone
+          const dropZone = this.els.swipeDropZone;
+          if (dropZone) {
+            dropZone.classList.add('active');
+            if (dy > 80) {
+              dropZone.classList.add('ready');
+            } else {
+              dropZone.classList.remove('ready');
+            }
+          }
+        }
+      }, { passive: true });
+
+      el.addEventListener('touchend', (e) => {
+        clearTimeout(this._longPressTimer);
+
+        const dropZone = this.els.swipeDropZone;
+        if (dropZone) {
+          dropZone.classList.remove('active', 'ready');
+        }
+
+        if (!this._swipeActive) return;
+        el.classList.remove('dragging');
+
+        // Reset double-tap state after swipe to prevent false triggers
+        this._lastTapCardId = null;
+        this._lastTapTime = 0;
+
+        const dy = this._swipeStartY - (e.changedTouches[0]?.clientY || this._swipeStartY);
+
+        if (dy > 80) {
+          // Swipe threshold met → try to play
+          this.handleSwipePlay(card, el);
+        } else {
+          // Not enough → return card to position
+          el.style.transform = '';
+          // Keep _swipeActive true briefly so onclick handler blocks the click
+          setTimeout(() => { this._swipeActive = false; }, 50);
+        }
+      });
+
       // Stagger animation
       el.style.animationDelay = `${i * 0.05}s`;
       container.appendChild(el);
     });
+
+    // Tap outside cards to deselect all
+    container.onclick = (e) => {
+      if (e.target === container && Game.selectedCards.length > 0) {
+        Game.selectedCards = [];
+        UI.renderHand();
+        UI.updateActionButtons();
+      }
+    };
   },
 
   createCardElement(card, faceUp = true) {
@@ -426,14 +530,32 @@ const UI = {
     const deckEl = this.els.deckArea;
     deckEl.className = `deck-pile ${count === 0 ? 'empty' : ''}`;
 
-    // Danger indicator (only in offline mode where we know deck contents)
+    // Remove old danger text
+    const oldDanger = deckEl.parentElement?.querySelector('.danger-text');
+    if (oldDanger) oldDanger.remove();
+
+    // B8: Enhanced danger indicator (only in offline mode where we know deck contents)
     if (Game.gameMode !== 'online') {
       const ekCount = Game.deck.filter(c => c.type === CardType.EXPLODING_KITTEN).length;
       const dangerLevel = count > 0 ? ekCount / count : 0;
-      if (dangerLevel > 0.4) {
+      if (dangerLevel > 0.5) {
+        deckEl.classList.add('danger-high', 'danger-extreme');
+        const dt = document.createElement('div');
+        dt.className = 'danger-text high';
+        dt.textContent = '⚠️ Rất nguy hiểm!';
+        deckEl.parentElement?.appendChild(dt);
+      } else if (dangerLevel > 0.3) {
         deckEl.classList.add('danger-high');
-      } else if (dangerLevel > 0.2) {
+        const dt = document.createElement('div');
+        dt.className = 'danger-text high';
+        dt.textContent = '⚠️ Nguy hiểm!';
+        deckEl.parentElement?.appendChild(dt);
+      } else if (dangerLevel > 0.15) {
         deckEl.classList.add('danger-medium');
+        const dt = document.createElement('div');
+        dt.className = 'danger-text medium';
+        dt.textContent = '⚠ Cẩn thận...';
+        deckEl.parentElement?.appendChild(dt);
       }
     }
   },
@@ -516,6 +638,7 @@ const UI = {
       } else {
         this.els.turnIndicator.textContent = `⏳ ${current.name} đang chơi...`;
         this.els.turnIndicator.className = 'turn-indicator ai-turn';
+        this.showTurnGlow(false);
       }
     }
   },
@@ -527,29 +650,96 @@ const UI = {
     this.els.drawBtn.disabled = !isMyTurn;
     this.els.playBtn.disabled = !isMyTurn || !canPlay;
 
-    // Update play button text
+    // Update play button text based on selection
     if (Game.selectedCards.length === 2) {
-      this.els.playBtn.textContent = '🐱 Đánh Cặp';
+      this.els.playBtn.textContent = '🐱 ĐÁNH CẶP';
     } else if (Game.selectedCards.length === 1) {
       const card = this.getMyPlayer()?.hand.find(c => c.id === Game.selectedCards[0]);
       if (card) {
-        this.els.playBtn.textContent = `${card.emoji} Đánh ${card.name}`;
+        this.els.playBtn.textContent = `${card.emoji} ĐÁNH ${card.name}`;
+      } else {
+        this.els.playBtn.textContent = '🃏 ĐÁNH BÀI';
       }
     } else {
-      this.els.playBtn.textContent = '🃏 Chọn bài để đánh';
+      this.els.playBtn.textContent = '🃏 Chọn bài...';
     }
 
-    // Show/hide play button based on selection
+    // Always show play button, but visually distinguish enabled/disabled states
     if (Game.selectedCards.length > 0 && canPlay) {
       this.els.playBtn.classList.add('visible');
+      this.els.playBtn.classList.add('ready-pulse');
     } else {
       this.els.playBtn.classList.remove('visible');
+      this.els.playBtn.classList.remove('ready-pulse');
     }
   },
 
   enablePlayerActions() {
     this.els.drawBtn.disabled = false;
     this.updateActionButtons();
+    // Add turn border glow
+    this.showTurnGlow(true);
+    // Reset double-tap state between turns
+    this._lastTapCardId = null;
+    this._lastTapTime = 0;
+    // B6: Turn flash - only on new turn start (not after each card play)
+    if (!this._turnFlashShown) {
+      this._turnFlashShown = true;
+      const cp = Game.currentPlayer;
+      if (cp && cp.isHuman) {
+        if (cp.turnsToPlay > 1) {
+          this.showTurnFlash(`⚔️ PHẢI CHƠI ${cp.turnsToPlay} LƯỢT!`, 'attack');
+        } else {
+          this.showTurnFlash('🎯 LƯỢT CỦA BẠN!', 'your-turn');
+        }
+      }
+    }
+  },
+
+  _turnFlashShown: false,
+
+  // ===== Turn Border Glow =====
+  showTurnGlow(show) {
+    const app = this.els.app;
+    if (!app) return;
+    if (show) {
+      app.classList.add('your-turn-glow');
+    } else {
+      app.classList.remove('your-turn-glow');
+    }
+  },
+
+  // ===== Card Preview (Long Press) =====
+  _longPressTimer: null,
+  _longPressTriggered: false,
+
+  showCardPreview(card) {
+    // Remove any existing preview overlay
+    const existing = document.getElementById('card-preview-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'card-preview-overlay';
+    overlay.id = 'card-preview-overlay';
+
+    const previewCard = document.createElement('div');
+    previewCard.className = 'card-preview-large';
+    const [c1, c2] = card.gradient;
+    previewCard.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+    previewCard.innerHTML = `
+      <div class="card-preview-emoji">${card.emoji}</div>
+      <div class="card-preview-name">${card.name}</div>
+      <div class="card-preview-desc">${card.description}</div>
+    `;
+
+    overlay.appendChild(previewCard);
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
+
+    // Auto-close after 3s
+    setTimeout(() => {
+      if (document.body.contains(overlay)) overlay.remove();
+    }, 3000);
   },
 
   // ===== Game Log =====
@@ -1566,5 +1756,157 @@ const UI = {
       div.appendChild(info);
       area.appendChild(div);
     }
+  },
+
+  // ===== B1: Swipe Play Handler =====
+  _swipeActive: false,
+  _swipeStartY: 0,
+  _swipeStartX: 0,
+  _swipeCardEl: null,
+  _swipeCard: null,
+
+  handleSwipePlay(card, el) {
+    const player = this.getMyPlayer();
+    if (!player || !Game.currentPlayer.isHuman || Game.isProcessing) {
+      el.style.transform = '';
+      // Delay reset so onclick handler can check _swipeActive
+      setTimeout(() => { this._swipeActive = false; }, 50);
+      return;
+    }
+
+    // Check if this card is playable
+    const isSinglePlayable = [
+      CardType.SKIP, CardType.ATTACK, CardType.SEE_FUTURE,
+      CardType.SHUFFLE, CardType.FAVOR
+    ].includes(card.type);
+
+    const isCat = isCatCard(card.type);
+
+    if (isSinglePlayable) {
+      // Play single card via swipe
+      this.haptic(30);
+      Game.selectedCards = [card.id];
+      Game.playSelectedCards();
+      // Keep _swipeActive true to block onclick, reset after
+      setTimeout(() => { this._swipeActive = false; }, 50);
+    } else if (isCat) {
+      // B2: Cat magnet - find matching cat
+      const match = player.hand.find(c => c.id !== card.id && c.type === card.type);
+      if (match) {
+        this.haptic(30);
+        this.animateCatMagnet(card, match, el);
+        // _swipeActive will be reset in animateCatMagnet after timeout
+      } else {
+        // No matching cat - reject
+        this.haptic([50, 30, 50]);
+        el.style.transform = '';
+        el.classList.add('swipe-invalid');
+        setTimeout(() => {
+          el.classList.remove('swipe-invalid');
+          this._swipeActive = false;
+        }, 400);
+      }
+    } else {
+      // Not playable (Defuse, Nope, EK) - reject
+      this.haptic([50, 30, 50]);
+      el.style.transform = '';
+      el.classList.add('swipe-invalid');
+      setTimeout(() => {
+        el.classList.remove('swipe-invalid');
+        this._swipeActive = false;
+      }, 400);
+    }
+  },
+
+  // ===== B2: Cat Pair Magnet Animation =====
+  animateCatMagnet(swipedCard, matchCard, swipedEl) {
+    // Find the matching card element in the DOM
+    const matchEl = document.querySelector(`.card[data-card-id="${matchCard.id}"]`);
+    if (!matchEl) {
+      Game.selectedCards = [swipedCard.id, matchCard.id];
+      Game.playSelectedCards();
+      this._swipeActive = false;
+      return;
+    }
+
+    // Get positions
+    const swipedRect = swipedEl.getBoundingClientRect();
+    const matchRect = matchEl.getBoundingClientRect();
+
+    // Make match card fly to the swiped card position
+    matchEl.classList.add('magnet-fly');
+    matchEl.style.left = matchRect.left + 'px';
+    matchEl.style.top = matchRect.top + 'px';
+    matchEl.style.width = matchRect.width + 'px';
+    matchEl.style.height = matchRect.height + 'px';
+
+    // Fly to swiped card
+    requestAnimationFrame(() => {
+      matchEl.style.left = swipedRect.left + 'px';
+      matchEl.style.top = (swipedRect.top - 60) + 'px';
+      matchEl.style.transform = 'rotate(10deg) scale(1.05)';
+    });
+
+    // After animation, play the pair
+    setTimeout(() => {
+      Game.selectedCards = [swipedCard.id, matchCard.id];
+      Game.playSelectedCards();
+      this._swipeActive = false;
+    }, 450);
+  },
+
+  // ===== B4: Double-Tap State =====
+  _lastTapCardId: null,
+  _lastTapTime: 0,
+
+  // ===== B6: Turn Flash Overlay =====
+  showTurnFlash(text, type) {
+    const el = this.els.turnFlash;
+    if (!el) return;
+
+    // Reset animation
+    el.className = 'turn-flash-overlay';
+    el.textContent = text;
+    el.offsetHeight; // Force reflow
+
+    el.classList.add(type === 'attack' ? 'flash-attack' : 'flash-your-turn');
+
+    // Clean up after animation
+    setTimeout(() => {
+      el.className = 'turn-flash-overlay';
+      el.textContent = '';
+    }, 1500);
+  },
+
+  // ===== B7: Haptic Feedback =====
+  haptic(pattern) {
+    if (navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (e) { /* ignore */ }
+    }
+  },
+
+  // ===== B3: Fullscreen Setup =====
+  setupFullscreen() {
+    const btn = this.els.fullscreenBtn || document.getElementById('fullscreen-btn');
+    if (!btn) return;
+
+    const updateIcon = () => {
+      const isFS = !!document.fullscreenElement;
+      btn.textContent = isFS ? '✕' : '⛶';
+      btn.title = isFS ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+    };
+
+    btn.onclick = () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    document.addEventListener('fullscreenchange', updateIcon);
+    updateIcon();
   }
 };

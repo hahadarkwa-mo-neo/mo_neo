@@ -180,7 +180,7 @@ const Network = {
         const info = typeof CARD_INFO !== 'undefined' ? CARD_INFO[data.cardType] : null;
         const cardObj = info || { emoji: '🃏', name: data.cardName || data.cardType, gradient: ['#444','#666'] };
         Sounds.cardPlay();
-        UI.animateCardPlay(cardObj, { name: data.playerName });
+        UI.animateCardPlay(cardObj, { index: data.playerIndex, name: data.playerName });
       }
     });
 
@@ -254,8 +254,11 @@ const Network = {
       if (isMyTurn) {
         Game.addLog(`🎯 Lượt của bạn!`);
         Sounds.turnStart();
+        UI._turnFlashShown = false; // Reset for new turn
+        UI.enablePlayerActions();
       } else {
         Game.addLog(`⏳ ${data.playerName} đang chơi...`);
+        UI.showTurnGlow(false);
       }
     });
 
