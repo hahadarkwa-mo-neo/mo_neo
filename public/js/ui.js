@@ -246,6 +246,33 @@ const UI = {
     this.highlightCurrentPlayer();
   },
 
+  getOpponentPositionClass(playerIndex) {
+    const myPlayer = this.getMyPlayer();
+    const myIndex = myPlayer ? myPlayer.index : 0;
+    const numPlayers = Game.players.length;
+    const relIdx = (playerIndex - myIndex + numPlayers) % numPlayers;
+
+    if (numPlayers === 2) {
+      return 'pos-top-center';
+    }
+    if (numPlayers === 3) {
+      if (relIdx === 1) return 'pos-top-left';
+      if (relIdx === 2) return 'pos-top-right';
+    }
+    if (numPlayers === 4) {
+      if (relIdx === 1) return 'pos-top-left';
+      if (relIdx === 2) return 'pos-top-right';
+      if (relIdx === 3) return 'pos-bottom-right';
+    }
+    if (numPlayers === 5) {
+      if (relIdx === 1) return 'pos-top-left';
+      if (relIdx === 2) return 'pos-top-middle';
+      if (relIdx === 3) return 'pos-top-right';
+      if (relIdx === 4) return 'pos-bottom-right';
+    }
+    return `pos-${relIdx}`;
+  },
+
   renderOpponents() {
     const area = this.els.opponentsArea;
     area.innerHTML = '';
@@ -254,7 +281,8 @@ const UI = {
       if (player.isHuman) continue;
 
       const div = document.createElement('div');
-      div.className = `opponent pos-${player.index} ${player.isAlive ? '' : 'dead'} ${
+      const posClass = this.getOpponentPositionClass(player.index);
+      div.className = `opponent ${posClass} ${player.isAlive ? '' : 'dead'} ${
         Game.currentPlayerIndex === player.index ? 'active-turn' : ''
       }`;
       div.dataset.playerIndex = player.index;
@@ -414,15 +442,31 @@ const UI = {
     const pile = this.els.discardArea;
     pile.innerHTML = '';
 
-    if (Game.discardPile.length > 0) {
-      const topCard = Game.discardPile[Game.discardPile.length - 1];
-      const cardEl = this.createCardElement(topCard, true);
-      cardEl.classList.add('discard-card');
-      pile.appendChild(cardEl);
+    const discardSize = Game.discardPile.length;
+    if (discardSize > 0) {
+      // Render up to 4 cards stacked together with realistic translations and rotations
+      const startIdx = Math.max(0, discardSize - 4);
+      for (let i = startIdx; i < discardSize; i++) {
+        const card = Game.discardPile[i];
+        const cardEl = this.createCardElement(card, true);
+        cardEl.classList.add('discard-card');
+        
+        // Deterministic offset and rotation based on index so it is stable when rendered
+        const rot = ((i * 37) % 25) - 12; // Between -12deg and 12deg
+        const tx = ((i * 13) % 10) - 5;    // Between -5px and 5px
+        const ty = ((i * 23) % 10) - 5;    // Between -5px and 5px
+        
+        cardEl.style.transform = `rotate(${rot}deg) translate(${tx}px, ${ty}px)`;
+        cardEl.style.zIndex = i - startIdx + 1; // Correct layering
+        
+        pile.appendChild(cardEl);
+      }
 
+      // Discard count badge on top
       const count = document.createElement('div');
       count.className = 'discard-count';
-      count.textContent = Game.discardPile.length;
+      count.textContent = discardSize;
+      count.style.zIndex = 100;
       pile.appendChild(count);
     } else {
       pile.innerHTML = '<div class="empty-pile">Bài bỏ</div>';
@@ -608,7 +652,7 @@ const UI = {
       const cardEl = document.querySelector(`.card[data-card-id="${card.id}"]`);
       fromEl = cardEl || this.els.playerInfo;
     } else {
-      fromEl = document.querySelector(`.opponent.pos-${player.index}`);
+      fromEl = document.querySelector(`.opponent[data-player-index="${player.index}"]`);
     }
     
     const toEl = this.els.discardArea;
@@ -625,7 +669,7 @@ const UI = {
     if (targetPlayer.index === myPlayer.index) {
       toEl = this.els.handCards;
     } else {
-      toEl = document.querySelector(`.opponent.pos-${targetPlayer.index}`);
+      toEl = document.querySelector(`.opponent[data-player-index="${targetPlayer.index}"]`);
     }
     
     this._flyCard(false, card, fromEl, toEl, () => {
@@ -1493,7 +1537,8 @@ const UI = {
       if (player.isHuman) continue;
 
       const div = document.createElement('div');
-      div.className = `opponent pos-${player.index} ${player.isAlive ? '' : 'dead'} ${
+      const posClass = this.getOpponentPositionClass(player.index);
+      div.className = `opponent ${posClass} ${player.isAlive ? '' : 'dead'} ${
         Game.currentPlayerIndex === player.index ? 'active-turn' : ''
       }`;
       div.dataset.playerIndex = player.index;
