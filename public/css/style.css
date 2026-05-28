@@ -1128,73 +1128,73 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-.card:hover {
-  transform: translateY(-18px) scale(1.08);
-  box-shadow: var(--shadow-card), 0 10px 25px rgba(255, 255, 255, 0.15);
-  z-index: 100;
-  border-color: rgba(255, 255, 255, 0.4);
+/* Hover - desktop only (pointer devices with hover capability) */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-card), 0 8px 20px rgba(255, 255, 255, 0.08);
+    z-index: 100;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Card Glows based on Type */
+  .card[data-card-type="defuse"]:hover {
+    box-shadow: 0 10px 25px rgba(0, 255, 136, 0.3), 0 0 15px rgba(0, 255, 136, 0.15);
+    border-color: var(--neon-green);
+  }
+  .card[data-card-type="nope"]:hover {
+    box-shadow: 0 10px 25px rgba(255, 46, 99, 0.3), 0 0 15px rgba(255, 46, 99, 0.15);
+    border-color: var(--neon-pink);
+  }
+  .card[data-card-type="skip"]:hover {
+    box-shadow: 0 10px 25px rgba(0, 212, 255, 0.3), 0 0 15px rgba(0, 212, 255, 0.15);
+    border-color: var(--neon-cyan);
+  }
+  .card[data-card-type="attack"]:hover {
+    box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3), 0 0 15px rgba(255, 107, 53, 0.15);
+    border-color: var(--neon-orange);
+  }
+  .card[data-card-type="see_future"]:hover {
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3), 0 0 15px rgba(124, 58, 237, 0.15);
+    border-color: var(--neon-purple);
+  }
+  .card[data-card-type="shuffle"]:hover {
+    box-shadow: 0 10px 25px rgba(251, 191, 36, 0.3), 0 0 15px rgba(251, 191, 36, 0.15);
+    border-color: var(--neon-yellow);
+  }
+  .card[data-card-type="favor"]:hover {
+    box-shadow: 0 10px 25px rgba(255, 46, 99, 0.25), 0 0 15px rgba(0, 212, 255, 0.2);
+    border-color: var(--neon-pink);
+  }
+  .card[data-card-type^="cat_"]:hover {
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25), 0 0 15px rgba(255, 107, 53, 0.2);
+    border-color: var(--neon-purple);
+  }
 }
 
-/* Card Glows based on Type */
-.card[data-card-type="defuse"]:hover {
-  box-shadow: 0 15px 30px rgba(0, 255, 136, 0.4), 0 0 20px rgba(0, 255, 136, 0.2);
-  border-color: var(--neon-green);
-}
-
-.card[data-card-type="nope"]:hover {
-  box-shadow: 0 15px 30px rgba(255, 46, 99, 0.4), 0 0 20px rgba(255, 46, 99, 0.2);
-  border-color: var(--neon-pink);
-}
-
-.card[data-card-type="skip"]:hover {
-  box-shadow: 0 15px 30px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.2);
-  border-color: var(--neon-cyan);
-}
-
-.card[data-card-type="attack"]:hover {
-  box-shadow: 0 15px 30px rgba(255, 107, 53, 0.4), 0 0 20px rgba(255, 107, 53, 0.2);
-  border-color: var(--neon-orange);
-}
-
-.card[data-card-type="see_future"]:hover {
-  box-shadow: 0 15px 30px rgba(124, 58, 237, 0.4), 0 0 20px rgba(124, 58, 237, 0.2);
-  border-color: var(--neon-purple);
-}
-
-.card[data-card-type="shuffle"]:hover {
-  box-shadow: 0 15px 30px rgba(251, 191, 36, 0.4), 0 0 20px rgba(251, 191, 36, 0.2);
-  border-color: var(--neon-yellow);
-}
-
-.card[data-card-type="favor"]:hover {
-  box-shadow: 0 15px 30px rgba(255, 46, 99, 0.3), 0 0 20px rgba(0, 212, 255, 0.3);
-  border-color: var(--neon-pink);
-}
-
-.card[data-card-type^="cat_"]:hover {
-  box-shadow: 0 15px 30px rgba(124, 58, 237, 0.3), 0 0 20px rgba(255, 107, 53, 0.3);
-  border-color: var(--neon-purple);
-}
-
+/* Tap feedback - same on all devices */
 .card:active {
-  transform: translateY(-4px) scale(0.97);
+  transform: scale(0.94);
+  transition: transform 0.08s ease;
 }
 
+/* Selected state - identical on desktop and mobile */
 .card.selected {
-  transform: translateY(-14px);
-  box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5), 0 0 30px rgba(0, 255, 136, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4), 0 0 24px rgba(0, 255, 136, 0.15);
   border-color: var(--neon-green);
+  z-index: 101;
 }
 
 .card.selected::after {
   content: '✓';
   position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 14px;
+  top: 3px;
+  right: 4px;
+  font-size: 12px;
   color: var(--neon-green);
   font-weight: 900;
-  text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
 }
 
 .card.new-card {
@@ -1981,12 +1981,8 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.5;
 }
 
-/* Show only on phone screens in portrait (only mobile touch devices) */
-@media (max-width: 899px) and (orientation: portrait) and (hover: none) and (pointer: coarse) {
-  .portrait-rotate-warning {
-    display: flex;
-  }
-}
+/* Portrait warning disabled - game supports all orientations */
+/* @media (max-width: 899px) and (orientation: portrait) ... removed */
 
 /* ============================================================
    FLOATING FLYING CARDS
@@ -2833,18 +2829,7 @@ input[type="range"]::-moz-range-thumb {
   .sound-toggle { right: 8px !important; }
   .fullscreen-btn { right: 48px !important; }
 
-  /* ---- Selected Card ---- */
-  .card.selected {
-    transform: translateY(-10px) !important;
-  }
-  .card:hover {
-    transform: translateY(-12px) scale(1.05) !important;
-  }
-  .card.selected::after {
-    font-size: 11px !important;
-    top: 2px !important;
-    right: 4px !important;
-  }
+  /* Selected card - no override needed, base styles already unified */
 
   /* ---- B1: Drop Zone ---- */
   .swipe-drop-zone {
@@ -3296,4 +3281,145 @@ input[type="range"]::-moz-range-thumb {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(2deg); }
   75% { transform: rotate(-2deg); }
+}
+
+/* ============================================================
+   PORTRAIT MOBILE (phones held vertically, width <= 480px)
+   ============================================================ */
+@media (max-width: 480px) and (orientation: portrait) {
+  :root {
+    --card-width: 56px;
+    --card-height: 80px;
+    --card-radius: 8px;
+  }
+
+  /* Game area centered in portrait */
+  .game-area {
+    top: 40% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 260px !important;
+  }
+  .table-area {
+    padding: 8px 14px !important;
+    gap: 12px !important;
+    border-radius: 14px !important;
+  }
+  .pile-label { font-size: 9px !important; }
+  .table-divider { font-size: 14px !important; margin-bottom: 10px !important; }
+  .deck-pile::before { font-size: 20px !important; }
+  .deck-pile::after { font-size: 12px !important; bottom: 4px !important; }
+
+  /* Opponents repositioned for portrait */
+  .opponent {
+    width: 120px !important;
+    height: 44px !important;
+    padding: 3px 6px !important;
+    border-radius: 10px !important;
+    gap: 5px !important;
+  }
+  .opponent-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+  }
+  .opponent-name { font-size: 10px !important; }
+  .opponent-cards { font-size: 9px !important; }
+
+  .opponent.pos-1, .opponent.pos-top-left {
+    top: 34px !important;
+    left: 6px !important;
+  }
+  .opponent.pos-2, .opponent.pos-top-right {
+    top: 34px !important;
+    right: 6px !important;
+  }
+  .opponent.pos-3, .opponent.pos-bottom-right {
+    top: 84px !important;
+    right: 6px !important;
+    bottom: auto !important;
+  }
+  .opponent.pos-top-center, .opponent.pos-top-middle {
+    top: 34px !important;
+  }
+
+  /* Player info */
+  #player-info {
+    width: 120px !important;
+    height: 44px !important;
+    bottom: auto !important;
+    top: 84px !important;
+    left: 6px !important;
+    padding: 3px 6px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Turn indicator */
+  .turn-indicator {
+    top: 4px !important;
+    padding: 3px 12px !important;
+    font-size: 10px !important;
+    min-height: 24px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Card content */
+  .card-emoji { font-size: 20px !important; margin-bottom: 1px !important; }
+  .card-name { font-size: 8px !important; }
+  .card-desc { display: none !important; }
+  .card-pattern { font-size: 8px !important; }
+  .card.face-up { padding: 4px 3px !important; }
+
+  /* Hand section */
+  .hand-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: calc(4px + var(--safe-bottom)) !important;
+  }
+  #hand-cards {
+    padding: 6px 10px !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+  }
+  #hand-cards .card {
+    flex-shrink: 0 !important;
+    margin-left: -16px !important;
+  }
+  #hand-cards .card:first-child { margin-left: 0 !important; }
+
+  /* Action buttons */
+  .action-buttons {
+    gap: 5px !important;
+    padding: 0 6px !important;
+    margin-top: -1px !important;
+  }
+  #draw-btn, #play-btn {
+    padding: 7px 12px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Sound + Fullscreen */
+  .sound-toggle, .fullscreen-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 15px !important;
+    top: 4px !important;
+  }
+  .sound-toggle { right: 6px !important; }
+  .fullscreen-btn { right: 42px !important; }
+
+  /* Selected card - unified, no override needed */
+  /* Game log */
+  #game-log { height: 32px !important; }
+  .log-message { font-size: 9px !important; }
+
+  /* Swipe drop zone */
+  .swipe-drop-zone {
+    top: 28% !important;
+    width: 130px !important;
+    height: 45px !important;
+  }
+
+  /* Turn flash */
+  .turn-flash-overlay { font-size: 16px !important; }
 }
