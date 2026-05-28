@@ -31,11 +31,103 @@ const Game = {
   selectedCards: [],
   lastPlayedCard: null,
 
+  // Online mode
+  gameMode: 'offline',  // 'offline' | 'online'
+  onlineState: null,     // Latest state from server
+
   // ===== Initialization =====
 
   init() {
     this.phase = GamePhase.MENU;
+    this.gameMode = 'offline';
+    this.onlineState = null;
     UI.showMenu();
+  },
+
+  initOffline() {
+    this.gameMode = 'offline';
+    this.onlineState = null;
+  },
+
+  initOnline(serverData) {
+    this.gameMode = 'online';
+    this.phase = GamePhase.PLAYING;
+    this.log = [];
+    this.selectedCards = [];
+    this.isProcessing = false;
+    this.turnCount = 0;
+
+    this.addLog('🌐 Game online bắt đầu! Chúc may mắn!');
+    Sounds.init();
+    UI.showGame();
+
+    if (serverData) {
+      this.updateFromServer(serverData);
+    }
+  },
+
+  updateFromServer(state) {
+    this.onlineState = state;
+
+    // Map server state into local game objects
+    if (state.players) {
+      this.players = state.players.map((p, i) => {
+        const isMe = p.id === Network.myPlayerId;
+        // For the local player, use myHand from server state
+        let hand = [];
+        if (isMe && state.myHand) {
+          hand = state.myHand.map(c => {
+            // Enrich card with display info from client-side CARD_INFO
+            const info = CARD_INFO[c.type];
+            if (info) {
+              return { ...c, ...info };
+            }
+            return c;
+          });
+        }
+        return {
+          index: p.index !== undefined ? p.index : i,
+          id: p.id,
+          name: p.name,
+          avatar: p.avatar || PLAYER_AVATARS[i] || '😺',
+          color: PLAYER_COLORS[i] || '#00d4ff',
+          isHuman: isMe,
+          isAlive: p.isAlive !== undefined ? p.isAlive : true,
+          hand: hand,
+          cardCount: isMe ? hand.length : (p.cardCount || 0),
+          turnsToPlay: p.turnsToPlay || 1,
+          hasCardType(type) { return this.hand.some(c => c.type === type); },
+          get cardCountDisplay() { return this.isHuman ? this.hand.length : this.cardCount; }
+        };
+      });
+    }
+
+    if (state.currentPlayerIndex !== undefined) {
+      this.currentPlayerIndex = state.currentPlayerIndex;
+    }
+
+    if (state.deckCount !== undefined) {
+      // For online, deck is just a count for display
+      this.deck = new Array(state.deckCount);
+    }
+
+    if (state.discardPile) {
+      // Enrich discard pile cards with display info
+      this.discardPile = state.discardPile.map(c => {
+        const info = CARD_INFO[c.type];
+        return info ? { ...c, ...info } : c;
+      });
+    }
+
+    if (state.turnCount !== undefined) {
+      this.turnCount = state.turnCount;
+    }
+
+    this.numPlayers = this.players.length;
+    this.selectedCards = [];
+    this.isProcessing = false;
+
+    UI.renderAll();
   },
 
   startGame(numPlayers) {
@@ -126,7 +218,9 @@ const Game = {
   // ===== Human Player Actions =====
 
   selectCard(cardId) {
-    if (this.isProcessing || this.currentPlayer.index !== 0) return;
+    if (this.isProcessing) return;
+    // In offline mode, human is always index 0; in online, check isHuman
+    if (!this.currentPlayer || !this.currentPlayer.isHuman) return;
 
     const cardIdx = this.selectedCards.indexOf(cardId);
     if (cardIdx >= 0) {
@@ -215,6 +309,31 @@ const Game = {
 
   async playSelectedCards() {
     if (!this.canPlaySelected() || this.isProcessing) return;
+
+    // Online mode: delegate to server
+    if (this.gameMode === 'online') {
+      this.isProcessing = true;
+      const cardIds = [...this.selectedCards];
+      // Check if we need a target
+      const cards = cardIds.map(id => this.currentPlayer.hand.find(c => c.id === id)).filter(Boolean);
+      const needsTarget = (cards.length === 2 && isCatCard(cards[0].type)) ||
+                          (cards.length === 1 && cards[0].type === CardType.FAVOR);
+
+      if (needsTarget) {
+        const opponents = this.getAliveOpponents(this.currentPlayerIndex);
+        if (opponents.length === 1) {
+          Network.playCards(cardIds, opponents[0].id);
+        } else {
+          UI.showTargetPicker(opponents, (target) => {
+            Network.playCards(cardIds, target.id);
+          });
+        }
+      } else {
+        Network.playCards(cardIds, null);
+      }
+      this.selectedCards = [];
+      return;
+    }
 
     this.isProcessing = true;
     const player = this.currentPlayer;
@@ -434,6 +553,14 @@ const Game = {
 
   async drawCard() {
     if (this.isProcessing) return;
+
+    // Online mode: delegate to server
+    if (this.gameMode === 'online') {
+      this.isProcessing = true;
+      Network.drawCard();
+      return;
+    }
+
     this.isProcessing = true;
 
     const player = this.currentPlayer;
