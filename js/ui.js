@@ -1,0 +1,939 @@
+/**
+ * ui.js - DOM rendering, interactions, animations, modals
+ * Mèo Nổ (Exploding Kittens) Browser Game
+ */
+
+const UI = {
+  // Cache DOM elements
+  els: {},
+
+  initElements() {
+    this.els = {
+      app: document.getElementById('app'),
+      menuScreen: document.getElementById('menu-screen'),
+      gameScreen: document.getElementById('game-screen'),
+      gameOverScreen: document.getElementById('game-over-screen'),
+      playerCountSlider: document.getElementById('player-count'),
+      playerCountLabel: document.getElementById('player-count-label'),
+      startBtn: document.getElementById('start-btn'),
+      rulesBtn: document.getElementById('rules-btn'),
+      rulesModal: document.getElementById('rules-modal'),
+      opponentsArea: document.getElementById('opponents-area'),
+      deckArea: document.getElementById('deck-pile'),
+      deckCount: document.getElementById('deck-count'),
+      discardArea: document.getElementById('discard-pile'),
+      handArea: document.getElementById('hand-area'),
+      handCards: document.getElementById('hand-cards'),
+      drawBtn: document.getElementById('draw-btn'),
+      playBtn: document.getElementById('play-btn'),
+      playerInfo: document.getElementById('player-info'),
+      gameLog: document.getElementById('game-log'),
+      logMessages: document.getElementById('log-messages'),
+      modalOverlay: document.getElementById('modal-overlay'),
+      modalContent: document.getElementById('modal-content'),
+      explosionOverlay: document.getElementById('explosion-overlay'),
+      particles: document.getElementById('particles'),
+      turnIndicator: document.getElementById('turn-indicator'),
+      soundToggle: document.getElementById('sound-toggle'),
+      goLabel: document.getElementById('go-label'),
+    };
+  },
+
+  // ===== Screen Management =====
+
+  showMenu() {
+    this.initElements();
+    this.els.menuScreen.classList.add('active');
+    this.els.gameScreen.classList.remove('active');
+    this.els.gameOverScreen.classList.remove('active');
+    this.setupMenuEvents();
+  },
+
+  showGame() {
+    this.els.menuScreen.classList.remove('active');
+    this.els.gameScreen.classList.add('active');
+    this.els.gameOverScreen.classList.remove('active');
+    this.setupGameEvents();
+  },
+
+  showGameOver(winner) {
+    const screen = this.els.gameOverScreen;
+    screen.classList.add('active');
+
+    const title = screen.querySelector('.game-over-title');
+    const avatar = screen.querySelector('.game-over-avatar');
+    const subtitle = screen.querySelector('.game-over-subtitle');
+    const stats = screen.querySelector('.game-over-stats');
+
+    if (winner && winner.isHuman) {
+      title.textContent = '🎉 CHIẾN THẮNG!';
+      title.style.color = '#00ff88';
+      avatar.textContent = '😺';
+      subtitle.textContent = 'Bạn là người sống sót cuối cùng!';
+      this.createConfetti();
+    } else {
+      title.textContent = '💀 THUA RỒI!';
+      title.style.color = '#ff2e63';
+      avatar.textContent = '😿';
+      subtitle.textContent = winner ? `${winner.name} đã thắng!` : 'Game Over!';
+    }
+
+    // Stats
+    stats.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Tổng lượt chơi</span>
+        <span class="stat-value">${Game.turnCount}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Bài đã đánh</span>
+        <span class="stat-value">${Game.discardPile.length}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Người sống sót</span>
+        <span class="stat-value">${Game.getAlivePlayers().length}/${Game.numPlayers}</span>
+      </div>
+    `;
+
+    const restartBtn = screen.querySelector('.restart-btn');
+    restartBtn.onclick = () => {
+      screen.classList.remove('active');
+      this.stopConfetti();
+      Game.startGame(Game.numPlayers);
+    };
+
+    const menuBtn = screen.querySelector('.menu-btn');
+    menuBtn.onclick = () => {
+      screen.classList.remove('active');
+      this.stopConfetti();
+      Game.init();
+    };
+  },
+
+  // ===== Menu Events =====
+
+  setupMenuEvents() {
+    const slider = this.els.playerCountSlider;
+    const label = this.els.playerCountLabel;
+
+    if (slider) {
+      const updateEmojis = () => {
+        label.textContent = slider.value;
+        const emojis = document.querySelector('.player-emojis');
+        if (emojis) {
+          const count = parseInt(slider.value);
+          emojis.innerHTML = PLAYER_AVATARS.slice(0, count)
+            .map((a, i) => `<span style="opacity:${i === 0 ? '1' : '0.6'}">${a}</span>`)
+            .join('');
+        }
+      };
+      slider.oninput = updateEmojis;
+      updateEmojis();
+    }
+
+    this.els.startBtn.onclick = () => {
+      Sounds.click();
+      const numPlayers = parseInt(slider.value);
+      Game.startGame(numPlayers);
+    };
+
+    this.els.rulesBtn.onclick = () => {
+      Sounds.click();
+      this.els.rulesModal.classList.add('active');
+    };
+
+    const closeRules = this.els.rulesModal.querySelector('.close-modal');
+    if (closeRules) {
+      closeRules.onclick = () => {
+        this.els.rulesModal.classList.remove('active');
+      };
+    }
+
+    this.els.rulesModal.onclick = (e) => {
+      if (e.target === this.els.rulesModal) {
+        this.els.rulesModal.classList.remove('active');
+      }
+    };
+
+    // Sound toggle
+    if (this.els.soundToggle) {
+      this.els.soundToggle.onclick = () => {
+        Sounds.enabled = !Sounds.enabled;
+        this.els.soundToggle.textContent = Sounds.enabled ? '🔊' : '🔇';
+        this.els.soundToggle.title = Sounds.enabled ? 'Tắt âm thanh' : 'Bật âm thanh';
+      };
+    }
+  },
+
+  // ===== Game Events =====
+
+  setupGameEvents() {
+    this.els.drawBtn.onclick = () => {
+      if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+        Sounds.click();
+        Game.drawCard();
+      }
+    };
+
+    this.els.playBtn.onclick = () => {
+      if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+        Sounds.click();
+        Game.playSelectedCards();
+      }
+    };
+
+    // Deck click also draws
+    this.els.deckArea.onclick = () => {
+      if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+        Sounds.click();
+        Game.drawCard();
+      }
+    };
+  },
+
+  // ===== Rendering =====
+
+  renderAll() {
+    this.renderOpponents();
+    this.renderHand();
+    this.renderDeck();
+    this.renderDiscard();
+    this.renderPlayerInfo();
+    this.updateActionButtons();
+    this.highlightCurrentPlayer();
+  },
+
+  renderOpponents() {
+    const area = this.els.opponentsArea;
+    area.innerHTML = '';
+
+    for (const player of Game.players) {
+      if (player.isHuman) continue;
+
+      const div = document.createElement('div');
+      div.className = `opponent ${player.isAlive ? '' : 'dead'} ${
+        Game.currentPlayerIndex === player.index ? 'active-turn' : ''
+      }`;
+      div.dataset.playerIndex = player.index;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'opponent-avatar';
+      avatar.textContent = player.isAlive ? player.avatar : '💀';
+      avatar.style.borderColor = player.color;
+
+      const info = document.createElement('div');
+      info.className = 'opponent-info';
+
+      const name = document.createElement('div');
+      name.className = 'opponent-name';
+      name.textContent = player.name;
+      name.style.color = player.color;
+
+      const cards = document.createElement('div');
+      cards.className = 'opponent-cards';
+      cards.textContent = player.isAlive ? `🃏 ${player.cardCount}` : 'Bị loại';
+
+      info.appendChild(name);
+      info.appendChild(cards);
+      div.appendChild(avatar);
+      div.appendChild(info);
+
+      // Show card backs
+      if (player.isAlive && player.cardCount > 0) {
+        const cardBacks = document.createElement('div');
+        cardBacks.className = 'opponent-card-backs';
+        const displayCount = Math.min(player.cardCount, 8);
+        for (let i = 0; i < displayCount; i++) {
+          const cardBack = document.createElement('div');
+          cardBack.className = 'mini-card-back';
+          cardBack.style.transform = `translateX(${i * 12}px)`;
+          cardBacks.appendChild(cardBack);
+        }
+        if (player.cardCount > 8) {
+          const more = document.createElement('span');
+          more.className = 'more-cards';
+          more.textContent = `+${player.cardCount - 8}`;
+          cardBacks.appendChild(more);
+        }
+        div.appendChild(cardBacks);
+      }
+
+      area.appendChild(div);
+    }
+  },
+
+  renderHand() {
+    const container = this.els.handCards;
+    container.innerHTML = '';
+
+    const player = Game.players[0]; // Human player
+    if (!player) return;
+
+    if (!player.isAlive) {
+      container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--text-muted);font-size:14px;font-weight:700;gap:8px;">
+          <span style="font-size:28px">💀</span>
+          <span>Bạn đã bị loại! Đang xem game tiếp...</span>
+        </div>
+      `;
+      return;
+    }
+
+    // Sort hand: Defuse first, then action cards, then cat cards
+    const sortOrder = {
+      [CardType.DEFUSE]: 0,
+      [CardType.NOPE]: 1,
+      [CardType.SKIP]: 2,
+      [CardType.ATTACK]: 3,
+      [CardType.SEE_FUTURE]: 4,
+      [CardType.SHUFFLE]: 5,
+      [CardType.FAVOR]: 6,
+      [CardType.CAT_TACO]: 7,
+      [CardType.CAT_MELON]: 8,
+      [CardType.CAT_BEARD]: 9,
+      [CardType.CAT_RAINBOW]: 10,
+      [CardType.EXPLODING_KITTEN]: 11
+    };
+
+    const sorted = [...player.hand].sort((a, b) =>
+      (sortOrder[a.type] || 99) - (sortOrder[b.type] || 99)
+    );
+
+    sorted.forEach((card, i) => {
+      const el = this.createCardElement(card, true);
+      const isSelected = Game.selectedCards.includes(card.id);
+      if (isSelected) {
+        el.classList.add('selected');
+      }
+
+      el.onclick = () => {
+        if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+          Sounds.click();
+          Game.selectCard(card.id);
+        }
+      };
+
+      // Stagger animation
+      el.style.animationDelay = `${i * 0.05}s`;
+      container.appendChild(el);
+    });
+  },
+
+  createCardElement(card, faceUp = true) {
+    const el = document.createElement('div');
+    el.className = `card ${faceUp ? 'face-up' : 'face-down'}`;
+    el.dataset.cardId = card.id;
+    el.dataset.cardType = card.type;
+
+    if (faceUp) {
+      const [c1, c2] = card.gradient;
+      el.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+
+      el.innerHTML = `
+        <div class="card-pattern">${card.bgPattern || ''}</div>
+        <div class="card-emoji">${card.emoji}</div>
+        <div class="card-name">${card.name}</div>
+        <div class="card-desc">${card.description}</div>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="card-back-pattern">
+          <span>🐱</span>
+          <span>💣</span>
+        </div>
+      `;
+    }
+
+    return el;
+  },
+
+  renderDeck() {
+    const count = Game.deck.length;
+    this.els.deckCount.textContent = count;
+
+    // Visual stack effect
+    const deckEl = this.els.deckArea;
+    deckEl.className = `deck-pile ${count === 0 ? 'empty' : ''}`;
+
+    // Danger indicator
+    const ekCount = Game.deck.filter(c => c.type === CardType.EXPLODING_KITTEN).length;
+    const dangerLevel = count > 0 ? ekCount / count : 0;
+    if (dangerLevel > 0.4) {
+      deckEl.classList.add('danger-high');
+    } else if (dangerLevel > 0.2) {
+      deckEl.classList.add('danger-medium');
+    }
+  },
+
+  renderDiscard() {
+    const pile = this.els.discardArea;
+    pile.innerHTML = '';
+
+    if (Game.discardPile.length > 0) {
+      const topCard = Game.discardPile[Game.discardPile.length - 1];
+      const cardEl = this.createCardElement(topCard, true);
+      cardEl.classList.add('discard-card');
+      pile.appendChild(cardEl);
+
+      const count = document.createElement('div');
+      count.className = 'discard-count';
+      count.textContent = Game.discardPile.length;
+      pile.appendChild(count);
+    } else {
+      pile.innerHTML = '<div class="empty-pile">Bài bỏ</div>';
+    }
+  },
+
+  renderPlayerInfo() {
+    const player = Game.players[0];
+    if (!player) return;
+
+    const info = this.els.playerInfo;
+    info.innerHTML = `
+      <span class="player-avatar-main">${player.isAlive ? player.avatar : '💀'}</span>
+      <span class="player-name-main">${player.name}</span>
+      <span class="player-card-count">🃏 ${player.cardCount}</span>
+    `;
+  },
+
+  highlightCurrentPlayer() {
+    // Remove all highlights
+    document.querySelectorAll('.opponent').forEach(el => {
+      el.classList.remove('active-turn');
+    });
+
+    const current = Game.currentPlayer;
+    if (!current) return;
+
+    if (!current.isHuman) {
+      const opEl = document.querySelector(`.opponent[data-player-index="${current.index}"]`);
+      if (opEl) opEl.classList.add('active-turn');
+    }
+
+    // Turn indicator
+    if (this.els.turnIndicator) {
+      if (current.isHuman) {
+        let text = '🎯 Lượt của bạn';
+        if (current.turnsToPlay > 1) {
+          text += ` (còn ${current.turnsToPlay} lượt!)`;
+        }
+        this.els.turnIndicator.textContent = text;
+        this.els.turnIndicator.className = 'turn-indicator your-turn';
+      } else {
+        this.els.turnIndicator.textContent = `⏳ ${current.name} đang chơi...`;
+        this.els.turnIndicator.className = 'turn-indicator ai-turn';
+      }
+    }
+  },
+
+  updateActionButtons() {
+    const isMyTurn = Game.currentPlayer.isHuman && !Game.isProcessing;
+    const canPlay = Game.canPlaySelected();
+
+    this.els.drawBtn.disabled = !isMyTurn;
+    this.els.playBtn.disabled = !isMyTurn || !canPlay;
+
+    // Update play button text
+    if (Game.selectedCards.length === 2) {
+      this.els.playBtn.textContent = '🐱 Đánh Cặp';
+    } else if (Game.selectedCards.length === 1) {
+      const card = Game.players[0].hand.find(c => c.id === Game.selectedCards[0]);
+      if (card) {
+        this.els.playBtn.textContent = `${card.emoji} Đánh ${card.name}`;
+      }
+    } else {
+      this.els.playBtn.textContent = '🃏 Chọn bài để đánh';
+    }
+
+    // Show/hide play button based on selection
+    if (Game.selectedCards.length > 0 && canPlay) {
+      this.els.playBtn.classList.add('visible');
+    } else {
+      this.els.playBtn.classList.remove('visible');
+    }
+  },
+
+  enablePlayerActions() {
+    this.els.drawBtn.disabled = false;
+    this.updateActionButtons();
+  },
+
+  // ===== Game Log =====
+
+  updateLog() {
+    const container = this.els.logMessages;
+    if (!container) return;
+
+    container.innerHTML = '';
+    const recent = Game.log.slice(-5);
+
+    recent.forEach((entry, i) => {
+      const msg = document.createElement('div');
+      msg.className = 'log-message';
+      msg.textContent = entry.text;
+      if (i === recent.length - 1) {
+        msg.classList.add('latest');
+      }
+      container.appendChild(msg);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  },
+
+  // ===== Animations =====
+
+  animateCardPlay(card, player) {
+    // Create floating card that flies to discard pile
+    const floater = document.createElement('div');
+    floater.className = 'card floating-card card-play-anim';
+    const [c1, c2] = card.gradient;
+    floater.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+    floater.innerHTML = `
+      <div class="card-emoji">${card.emoji}</div>
+      <div class="card-name">${card.name}</div>
+    `;
+
+    document.body.appendChild(floater);
+
+    // Animate to discard pile
+    requestAnimationFrame(() => {
+      floater.classList.add('played');
+      setTimeout(() => floater.remove(), 600);
+    });
+  },
+
+  animateCardDraw(card) {
+    const handContainer = this.els.handCards;
+    if (!handContainer) return;
+
+    // Flash effect on new card
+    setTimeout(() => {
+      const cards = handContainer.querySelectorAll('.card');
+      if (cards.length > 0) {
+        const last = cards[cards.length - 1];
+        last.classList.add('new-card');
+        setTimeout(() => last.classList.remove('new-card'), 600);
+      }
+      this.renderHand();
+    }, 100);
+  },
+
+  animateShuffle() {
+    const deck = this.els.deckArea;
+    deck.classList.add('shuffling');
+    setTimeout(() => deck.classList.remove('shuffling'), 600);
+  },
+
+  // ===== Explosion Effect =====
+
+  async showExplosion(player) {
+    const overlay = this.els.explosionOverlay;
+    overlay.classList.add('active');
+
+    // Create particles
+    const particles = this.els.particles;
+    particles.innerHTML = '';
+
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = ['💣', '🔥', '💥', '☠️', '🐱'][Math.floor(Math.random() * 5)];
+      p.style.left = '50%';
+      p.style.top = '50%';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 150;
+      p.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+      p.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+      p.style.setProperty('--delay', `${Math.random() * 0.3}s`);
+      p.style.animationDelay = `${Math.random() * 0.3}s`;
+      particles.appendChild(p);
+    }
+
+    // Explosion text
+    const text = overlay.querySelector('.explosion-text');
+    if (text) {
+      text.textContent = `💣 ${player.name} BỐC PHẢI MÈO NỔ! 💣`;
+    }
+
+    return new Promise(resolve => setTimeout(resolve, 1200));
+  },
+
+  hideExplosion() {
+    this.els.explosionOverlay.classList.remove('active');
+  },
+
+  // ===== Modals =====
+
+  showModal(content, options = {}) {
+    return new Promise((resolve) => {
+      const overlay = this.els.modalOverlay;
+      const contentEl = this.els.modalContent;
+
+      contentEl.innerHTML = '';
+      if (typeof content === 'string') {
+        contentEl.innerHTML = content;
+      } else {
+        contentEl.appendChild(content);
+      }
+
+      overlay.classList.add('active');
+
+      if (options.autoClose) {
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          resolve();
+        }, options.autoClose);
+      }
+
+      // If there's a close button in the content
+      const closeBtn = contentEl.querySelector('.modal-close-btn');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          overlay.classList.remove('active');
+          resolve();
+        };
+      }
+
+      // Store resolve for external use
+      this._modalResolve = resolve;
+    });
+  },
+
+  closeModal(value) {
+    this.els.modalOverlay.classList.remove('active');
+    if (this._modalResolve) {
+      this._modalResolve(value);
+      this._modalResolve = null;
+    }
+  },
+
+  // ===== See the Future =====
+
+  async showSeeFuture(topCards) {
+    const container = document.createElement('div');
+    container.className = 'modal-inner see-future-modal';
+
+    const title = document.createElement('h3');
+    title.className = 'modal-title';
+    title.textContent = '🔮 3 Lá Trên Cùng';
+    container.appendChild(title);
+
+    const subtitle = document.createElement('p');
+    subtitle.className = 'modal-subtitle';
+    subtitle.textContent = 'Từ trái sang phải: trên cùng → dưới';
+    container.appendChild(subtitle);
+
+    const cardsRow = document.createElement('div');
+    cardsRow.className = 'modal-cards-row';
+
+    topCards.forEach((card, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'future-card-wrapper';
+
+      const label = document.createElement('div');
+      label.className = 'future-label';
+      label.textContent = i === 0 ? 'Trên cùng' : i === 1 ? 'Thứ 2' : 'Thứ 3';
+
+      const cardEl = this.createCardElement(card, true);
+      cardEl.classList.add('future-card');
+      cardEl.style.animationDelay = `${i * 0.15}s`;
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(cardEl);
+      cardsRow.appendChild(wrapper);
+    });
+
+    container.appendChild(cardsRow);
+
+    const btn = document.createElement('button');
+    btn.className = 'modal-btn modal-close-btn';
+    btn.textContent = 'Đã hiểu!';
+    container.appendChild(btn);
+
+    await this.showModal(container);
+  },
+
+  // ===== Favor Choice =====
+
+  showFavorChoice(targetPlayer, fromPlayer) {
+    return new Promise((resolve) => {
+      const container = document.createElement('div');
+      container.className = 'modal-inner favor-modal';
+
+      const title = document.createElement('h3');
+      title.className = 'modal-title';
+      title.textContent = `🎁 ${fromPlayer.name} xin bài!`;
+      container.appendChild(title);
+
+      const subtitle = document.createElement('p');
+      subtitle.className = 'modal-subtitle';
+      subtitle.textContent = 'Chọn 1 lá bài để cho:';
+      container.appendChild(subtitle);
+
+      const cardsRow = document.createElement('div');
+      cardsRow.className = 'modal-cards-row favor-cards';
+
+      targetPlayer.hand.forEach(card => {
+        const cardEl = this.createCardElement(card, true);
+        cardEl.classList.add('favor-card');
+        cardEl.onclick = () => {
+          targetPlayer.removeCard(card.id);
+          this.closeModal();
+          resolve(card);
+        };
+        cardsRow.appendChild(cardEl);
+      });
+
+      container.appendChild(cardsRow);
+      this.showModal(container);
+    });
+  },
+
+  // ===== Target Picker =====
+
+  showTargetPicker(opponents, callback) {
+    const container = document.createElement('div');
+    container.className = 'modal-inner target-modal';
+
+    const title = document.createElement('h3');
+    title.className = 'modal-title';
+    title.textContent = '🎯 Chọn mục tiêu';
+    container.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'target-list';
+
+    opponents.forEach(player => {
+      const btn = document.createElement('button');
+      btn.className = 'target-btn';
+      btn.style.borderColor = player.color;
+      btn.innerHTML = `
+        <span class="target-avatar">${player.avatar}</span>
+        <span class="target-name">${player.name}</span>
+        <span class="target-cards">🃏 ${player.cardCount}</span>
+      `;
+      btn.onclick = () => {
+        this.closeModal();
+        Game.isProcessing = true;
+        callback(player);
+      };
+      list.appendChild(btn);
+    });
+
+    container.appendChild(list);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'modal-btn cancel-btn';
+    cancelBtn.textContent = 'Hủy';
+    cancelBtn.onclick = () => {
+      this.closeModal();
+      Game.isProcessing = false;
+      Game.selectedCards = [];
+      // Return the cards to hand (they weren't removed yet)
+      UI.renderAll();
+      UI.enablePlayerActions();
+    };
+    container.appendChild(cancelBtn);
+
+    this.showModal(container);
+  },
+
+  // ===== Defuse Placement =====
+
+  showDefusePlacement(deckSize) {
+    return new Promise((resolve) => {
+      const container = document.createElement('div');
+      container.className = 'modal-inner defuse-modal';
+
+      const title = document.createElement('h3');
+      title.className = 'modal-title';
+      title.textContent = '🔧 Tháo Ngòi Thành Công!';
+      container.appendChild(title);
+
+      const subtitle = document.createElement('p');
+      subtitle.className = 'modal-subtitle';
+      subtitle.textContent = 'Đặt Mèo Nổ vào vị trí nào trong bộ bài?';
+      container.appendChild(subtitle);
+
+      // Position slider
+      const sliderContainer = document.createElement('div');
+      sliderContainer.className = 'defuse-slider-container';
+
+      const topLabel = document.createElement('div');
+      topLabel.className = 'defuse-label';
+      topLabel.textContent = '⬆️ Trên cùng (nguy hiểm cho người tiếp!)';
+
+      const bottomLabel = document.createElement('div');
+      bottomLabel.className = 'defuse-label';
+      bottomLabel.textContent = '⬇️ Dưới cùng (an toàn hơn)';
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'defuse-slider';
+      slider.min = 0;
+      slider.max = deckSize;
+      slider.value = Math.floor(deckSize / 2);
+
+      const posLabel = document.createElement('div');
+      posLabel.className = 'defuse-position';
+      posLabel.textContent = `Vị trí: ${slider.value} / ${deckSize}`;
+
+      slider.oninput = () => {
+        posLabel.textContent = `Vị trí: ${slider.value} / ${deckSize}`;
+        if (parseInt(slider.value) <= 2) {
+          posLabel.style.color = '#ff2e63';
+        } else if (parseInt(slider.value) >= deckSize - 2) {
+          posLabel.style.color = '#00ff88';
+        } else {
+          posLabel.style.color = '#fff';
+        }
+      };
+
+      sliderContainer.appendChild(topLabel);
+      sliderContainer.appendChild(slider);
+      sliderContainer.appendChild(posLabel);
+      sliderContainer.appendChild(bottomLabel);
+      container.appendChild(sliderContainer);
+
+      // Quick position buttons
+      const quickBtns = document.createElement('div');
+      quickBtns.className = 'defuse-quick-btns';
+
+      const positions = [
+        { label: '⬆️ Trên cùng', value: 0 },
+        { label: '🎲 Ngẫu nhiên', value: Math.floor(Math.random() * (deckSize + 1)) },
+        { label: '⬇️ Dưới cùng', value: deckSize }
+      ];
+
+      positions.forEach(pos => {
+        const btn = document.createElement('button');
+        btn.className = 'quick-pos-btn';
+        btn.textContent = pos.label;
+        btn.onclick = () => {
+          slider.value = pos.value;
+          slider.dispatchEvent(new Event('input'));
+        };
+        quickBtns.appendChild(btn);
+      });
+
+      container.appendChild(quickBtns);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'modal-btn confirm-btn';
+      confirmBtn.textContent = '✅ Xác Nhận';
+      confirmBtn.onclick = () => {
+        this.closeModal();
+        resolve(parseInt(slider.value));
+      };
+      container.appendChild(confirmBtn);
+
+      this.showModal(container);
+    });
+  },
+
+  // ===== Nope Prompt =====
+
+  showNopePrompt(card, playedBy, timeoutMs) {
+    return new Promise((resolve) => {
+      const player = Game.players[0]; // Human
+      if (!player.isAlive || !player.hasCardType(CardType.NOPE)) {
+        resolve(false);
+        return;
+      }
+
+      const container = document.createElement('div');
+      container.className = 'modal-inner nope-modal';
+
+      const title = document.createElement('h3');
+      title.className = 'modal-title nope-title';
+      title.textContent = `${playedBy.name} đánh ${card.emoji} ${card.name}!`;
+      container.appendChild(title);
+
+      const subtitle = document.createElement('p');
+      subtitle.className = 'modal-subtitle';
+      subtitle.textContent = 'Bạn muốn Phản Đối không?';
+      container.appendChild(subtitle);
+
+      // Countdown bar
+      const countdownBar = document.createElement('div');
+      countdownBar.className = 'countdown-bar';
+      const fill = document.createElement('div');
+      fill.className = 'countdown-fill';
+      fill.style.animationDuration = `${timeoutMs}ms`;
+      countdownBar.appendChild(fill);
+      container.appendChild(countdownBar);
+
+      const btnsRow = document.createElement('div');
+      btnsRow.className = 'nope-btns';
+
+      const nopeBtn = document.createElement('button');
+      nopeBtn.className = 'modal-btn nope-btn';
+      nopeBtn.textContent = '🚫 PHẢN ĐỐI!';
+      nopeBtn.onclick = () => {
+        clearTimeout(timeout);
+        this.closeModal();
+        resolve(true);
+      };
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'modal-btn skip-nope-btn';
+      skipBtn.textContent = 'Bỏ qua';
+      skipBtn.onclick = () => {
+        clearTimeout(timeout);
+        this.closeModal();
+        resolve(false);
+      };
+
+      btnsRow.appendChild(nopeBtn);
+      btnsRow.appendChild(skipBtn);
+      container.appendChild(btnsRow);
+
+      this.showModal(container);
+
+      const timeout = setTimeout(() => {
+        this.closeModal();
+        resolve(false);
+      }, timeoutMs);
+    });
+  },
+
+  // ===== Confetti Effect =====
+
+  confettiInterval: null,
+
+  createConfetti() {
+    const colors = ['#ff2e63', '#00d4ff', '#00ff88', '#fbbf24', '#c084fc', '#ff6b35'];
+    const container = document.getElementById('confetti-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.display = 'block';
+
+    this.confettiInterval = setInterval(() => {
+      for (let i = 0; i < 3; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.width = `${6 + Math.random() * 8}px`;
+        confetti.style.height = `${6 + Math.random() * 8}px`;
+        confetti.style.animationDuration = `${2 + Math.random() * 3}s`;
+        confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+        container.appendChild(confetti);
+
+        setTimeout(() => confetti.remove(), 5000);
+      }
+    }, 100);
+  },
+
+  stopConfetti() {
+    if (this.confettiInterval) {
+      clearInterval(this.confettiInterval);
+      this.confettiInterval = null;
+    }
+    const container = document.getElementById('confetti-container');
+    if (container) {
+      container.innerHTML = '';
+      container.style.display = 'none';
+    }
+  }
+};

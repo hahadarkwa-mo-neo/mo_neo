@@ -1,0 +1,16 @@
+{
+  "name": "meo-no-online",
+  "version": "1.0.0",
+  "description": "Mèo Nổ Online - Exploding Kittens Multiplayer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

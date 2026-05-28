@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Game</title>
+  <style>
+    body { background: #111; color: #eee; font-family: monospace; padding: 20px; font-size: 14px; }
+    .pass { color: #0f0; }
+    .fail { color: #f00; }
+    .section { color: #0df; font-weight: bold; margin-top: 10px; }
+    #output { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>🐱💣 Game Test Suite</h2>
+  <div id="output"></div>
+
+  <!-- Load game modules -->
+  <script src="js/cards.js"></script>
+  <script src="js/sounds.js"></script>
+  <script src="js/player.js"></script>
+
+  <script>
+    const out = document.getElementById('output');
+    function log(msg, cls) {
+      const div = document.createElement('div');
+      div.className = cls || '';
+      div.textContent = msg;
+      out.appendChild(div);
+    }
+
+    let passed = 0, failed = 0;
+
+    function assert(condition, name) {
+      if (condition) {
+        log(`  ✅ ${name}`, 'pass');
+        passed++;
+      } else {
+        log(`  ❌ ${name}`, 'fail');
+        failed++;
+      }
+    }
+
+    // ===== Test Card System =====
+    log('\n=== Card System ===', 'section');
+
+    const card = createCard(CardType.SKIP);
+    assert(card.type === CardType.SKIP, 'createCard returns correct type');
+    assert(card.name === 'Bỏ Lượt', 'createCard returns correct name');
+    assert(card.emoji === '⏭️', 'createCard returns correct emoji');
+    assert(card.id > 0, 'createCard assigns unique ID');
+    assert(Array.isArray(card.gradient) && card.gradient.length === 2, 'createCard has gradient');
+
+    // Test card types count
+    const allTypes = Object.values(CardType);
+    assert(allTypes.length === 12, `There are 12 card types (got ${allTypes.length})`);
+
+    // Test CARD_INFO completeness
+    for (const type of allTypes) {
+      const info = CARD_INFO[type];
+      assert(info !== undefined, `CARD_INFO exists for ${type}`);
+    }
+
+    // Test deck creation for different player counts
+    for (let n = 2; n <= 4; n++) {
+      const d = createDeck(n);
+      // Non-EK, non-Defuse cards: 4+4+5+4+5+4+4+4+4+4 = 42
+      assert(d.length === 42, `createDeck(${n}) creates 42 base cards`);
+    }
+
+    // Test dealing
+    for (let n = 2; n <= 4; n++) {
+      const d = createDeck(n);
+      const h = dealCards(d, n);
+      assert(h.length === n, `dealCards(${n}) creates ${n} hands`);
+      assert(h[0].length === 8, `Hand has 8 cards (7+1 Defuse) for ${n} players`);
+      
+      // Each hand has exactly 1 Defuse
+      for (let i = 0; i < n; i++) {
+        const defCount = h[i].filter(c => c.type === CardType.DEFUSE).length;
+        assert(defCount === 1, `Player ${i} has 1 Defuse in ${n}-player game`);
+      }
+
+      // Deck has n-1 Exploding Kittens
+      const ekInDeck = d.filter(c => c.type === CardType.EXPLODING_KITTEN).length;
+      assert(ekInDeck === n - 1, `Deck has ${n-1} EK after dealing in ${n}-player game (got ${ekInDeck})`);
+
+      // Deck has remaining Defuses (6 total - n dealt)
+      const defInDeck = d.filter(c => c.type === CardType.DEFUSE).length;
+      assert(defInDeck === 6 - n, `Deck has ${6-n} Defuse after dealing in ${n}-player game (got ${defInDeck})`);
+    }
+
+    // Test shuffle
+    log('\n=== Shuffle ===', 'section');
+    const sDeck = createDeck(4);
+    const ids1 = sDeck.map(c => c.id).join(',');
+    shuffleDeck(sDeck);
+    const ids2 = sDeck.map(c => c.id).join(',');
+    assert(sDeck.length === 42, 'Shuffle preserves length');
+    assert(ids1 !== ids2, 'Shuffle changes order');
+
+    // Test cat card detection
+    log('\n=== Cat Cards ===', 'section');
+    assert(isCatCard(CardType.CAT_TACO) === true, 'CAT_TACO is cat');
+    assert(isCatCard(CardType.CAT_MELON) === true, 'CAT_MELON is cat');
+    assert(isCatCard(CardType.CAT_BEARD) === true, 'CAT_BEARD is cat');
+    assert(isCatCard(CardType.CAT_RAINBOW) === true, 'CAT_RAINBOW is cat');
+    assert(isCatCard(CardType.SKIP) === false, 'SKIP is not cat');
+    assert(isCatCard(CardType.DEFUSE) === false, 'DEFUSE is not cat');
+
+    // Test findCatPairs
+    const testHand = [
+      createCard(CardType.CAT_TACO),
+      createCard(CardType.CAT_TACO),
+      createCard(CardType.CAT_MELON),
+      createCard(CardType.SKIP)
+    ];
+    const pairs = findCatPairs(testHand);
+    assert(pairs.length === 1, 'findCatPairs finds 1 pair');
+    assert(pairs[0].type === CardType.CAT_TACO, 'Pair is correct type');
+    assert(pairs[0].cards.length === 2, 'Pair has 2 cards');
+
+    // Test no pairs
+    const noPairHand = [
+      createCard(CardType.CAT_TACO),
+      createCard(CardType.CAT_MELON),
+      createCard(CardType.SKIP)
+    ];
+    assert(findCatPairs(noPairHand).length === 0, 'No pairs when all singles');
+
+    // ===== Test Player =====
+    log('\n=== Player ===', 'section');
+
+    const p = new Player(0, true);
+    assert(p.isHuman === true, 'Player 0 is human');
+    assert(p.isAlive === true, 'Player starts alive');
+    assert(p.turnsToPlay === 1, 'Player starts with 1 turn');
+    assert(p.name === 'Bạn', 'Player 0 named Bạn');
+    assert(p.avatar === '😺', 'Player 0 has correct avatar');
+
+    const p1 = new Player(1, false);
+    assert(p1.isHuman === false, 'Player 1 is AI');
+    assert(p1.name === 'Bot Miu', 'Player 1 named Bot Miu');
+
+    p.hand = [
+      createCard(CardType.DEFUSE),
+      createCard(CardType.SKIP),
+      createCard(CardType.ATTACK)
+    ];
+    assert(p.hasCardType(CardType.DEFUSE), 'hasCardType finds Defuse');
+    assert(!p.hasCardType(CardType.NOPE), 'hasCardType returns false for missing');
+    assert(p.countCardType(CardType.SKIP) === 1, 'countCardType works');
+    assert(p.cardCount === 3, 'cardCount getter works');
+
+    const skipCard = p.getCardOfType(CardType.SKIP);
+    assert(skipCard !== undefined && skipCard.type === CardType.SKIP, 'getCardOfType works');
+
+    const removedCard = p.removeCard(skipCard.id);
+    assert(removedCard.id === skipCard.id, 'removeCard by ID works');
+    assert(p.hand.length === 2, 'Hand size reduced');
+
+    const removedByType = p.removeCardByType(CardType.DEFUSE);
+    assert(removedByType.type === CardType.DEFUSE, 'removeCardByType works');
+    assert(p.hand.length === 1, 'Hand size reduced again');
+
+    const newCard = createCard(CardType.NOPE);
+    p.addCard(newCard);
+    assert(p.hand.length === 2, 'addCard works');
+
+    // ===== Test AI =====
+    log('\n=== AI ===', 'section');
+
+    // AI should not give Defuse
+    const aiP = new Player(1, false);
+    aiP.hand = [
+      createCard(CardType.DEFUSE),
+      createCard(CardType.SKIP),
+      createCard(CardType.CAT_TACO)
+    ];
+    const given = AI.chooseCardToGive(aiP);
+    assert(given.type !== CardType.DEFUSE, 'AI never gives Defuse (gives: ' + given.type + ')');
+
+    // AI with only Defuse
+    const aiP2 = new Player(1, false);
+    aiP2.hand = [createCard(CardType.DEFUSE)];
+    const given2 = AI.chooseCardToGive(aiP2);
+    assert(given2 !== null, 'AI gives card even if only has Defuse');
+
+    // AI EK placement
+    const placement = AI.chooseEKPlacement(10, {}, {});
+    assert(placement >= 0 && placement <= 10, 'AI EK placement is valid');
+
+    // AI best target
+    const targets = [
+      new Player(1, false),
+      new Player(2, false)
+    ];
+    targets[0].hand = [createCard(CardType.SKIP)];
+    targets[1].hand = [createCard(CardType.SKIP), createCard(CardType.ATTACK), createCard(CardType.NOPE)];
+    const bestTarget = AI.chooseBestTarget(targets, {});
+    assert(bestTarget.index === 2, 'AI targets player with most cards');
+
+    // ===== Test Sound Object =====
+    log('\n=== Sounds ===', 'section');
+    assert(typeof Sounds === 'object', 'Sounds object exists');
+    assert(typeof Sounds.cardPlay === 'function', 'Sounds.cardPlay exists');
+    assert(typeof Sounds.explosion === 'function', 'Sounds.explosion exists');
+    assert(typeof Sounds.victory === 'function', 'Sounds.victory exists');
+    assert(typeof Sounds.nope === 'function', 'Sounds.nope exists');
+    assert(typeof Sounds.defuse === 'function', 'Sounds.defuse exists');
+    assert(typeof Sounds.init === 'function', 'Sounds.init exists');
+    assert(typeof Sounds.click === 'function', 'Sounds.click exists');
+
+    // ===== Summary =====
+    log('\n========================================', 'section');
+    log(`Total: ${passed + failed} tests`, 'section');
+    log(`Passed: ${passed}`, passed > 0 ? 'pass' : '');
+    log(`Failed: ${failed}`, failed > 0 ? 'fail' : 'pass');
+    log('========================================', 'section');
+
+    document.title = failed === 0 ? `✅ All ${passed} tests passed` : `❌ ${failed} failed`;
+  </script>
+</body>
+</html>

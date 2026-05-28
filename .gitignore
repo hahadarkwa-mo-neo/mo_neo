@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Test outputs and test files we don't need on production
+test_online_flow.js
+search_players.js
+test_import.js
+
+# Backup directories
+.gemini/

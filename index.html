@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Game Mèo Nổ (Exploding Kittens) - Chơi ngay trên trình duyệt! Tối ưu cho điện thoại.">
+  <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>🐱💣 Mèo Nổ - Exploding Kittens</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sound Toggle (global) -->
+    <button id="sound-toggle" class="sound-toggle" title="Tắt/Bật âm thanh">🔊</button>
+
+    <!-- ===== MENU SCREEN ===== -->
+    <div id="menu-screen" class="screen active">
+      <div class="menu-content">
+        <div class="logo">
+          <span class="logo-emoji">🐱💣</span>
+          <h1 class="logo-title">MÈO NỔ</h1>
+          <p class="logo-subtitle">Exploding Kittens</p>
+        </div>
+
+        <div class="player-select">
+          <h3>👥 Số người chơi</h3>
+          <div class="player-slider-row">
+            <span class="player-count-display" id="player-count-label">4</span>
+            <input type="range" id="player-count" min="2" max="4" value="4" step="1">
+          </div>
+          <div class="player-emojis">
+            <span>😺</span>
+            <span>😸</span>
+            <span>😹</span>
+            <span>😻</span>
+          </div>
+        </div>
+
+        <button id="start-btn" class="btn-primary">🎮 BẮT ĐẦU CHƠI</button>
+        <button id="rules-btn" class="btn-secondary">📖 Hướng Dẫn Chơi</button>
+      </div>
+    </div>
+
+    <!-- ===== RULES MODAL ===== -->
+    <div id="rules-modal">
+      <div class="rules-content">
+        <h2>📖 Luật Chơi Mèo Nổ</h2>
+
+        <h3>🎯 Mục Tiêu</h3>
+        <p>Là người sống sót cuối cùng! Đừng bốc phải lá Mèo Nổ 💣</p>
+
+        <h3>🎲 Cách Chơi</h3>
+        <ul>
+          <li>Mỗi lượt, bạn có thể đánh bao nhiêu lá bài tùy thích</li>
+          <li>Kết thúc lượt bằng cách <strong>bốc 1 lá</strong> từ bộ bài</li>
+          <li>Nếu bốc phải 💣 <strong>Mèo Nổ</strong> → phải có 🔧 <strong>Tháo Ngòi</strong> để cứu!</li>
+          <li>Không có Tháo Ngòi = <strong>BỊ LOẠI!</strong></li>
+        </ul>
+
+        <h3>🃏 Các Loại Bài</h3>
+        <ul>
+          <li>💣 <strong>Mèo Nổ</strong> - Bốc phải = thua!</li>
+          <li>🔧 <strong>Tháo Ngòi</strong> - Cứu khỏi Mèo Nổ, đặt lại Mèo Nổ vào bộ bài</li>
+          <li>⏭️ <strong>Bỏ Lượt</strong> - Kết thúc lượt mà không cần bốc bài</li>
+          <li>⚔️ <strong>Tấn Công</strong> - Kết thúc lượt, người tiếp theo phải chơi 2 lượt!</li>
+          <li>🔮 <strong>Nhìn Trộm</strong> - Xem 3 lá bài trên cùng</li>
+          <li>🔀 <strong>Xáo Bài</strong> - Xáo trộn ngẫu nhiên bộ bài</li>
+          <li>🚫 <strong>Phản Đối</strong> - Hủy bỏ hành động của lá bài vừa đánh</li>
+          <li>🎁 <strong>Xin Bài</strong> - Buộc 1 người chơi khác cho bạn 1 lá bài</li>
+          <li>🐱 <strong>Bài Mèo</strong> (🌮🍉🧔🌈) - Đánh 2 lá giống nhau để ăn cắp bài!</li>
+        </ul>
+
+        <h3>💡 Mẹo</h3>
+        <ul>
+          <li>Luôn giữ lá Tháo Ngòi cho đến khi cần!</li>
+          <li>Dùng Nhìn Trộm trước khi bốc bài</li>
+          <li>Tấn Công khi bộ bài ít lá → đối thủ nguy hiểm!</li>
+          <li>Phản Đối có thể bị Phản Đối lại!</li>
+        </ul>
+
+        <button class="close-modal">✅ Đã Hiểu!</button>
+      </div>
+    </div>
+
+    <!-- ===== GAME SCREEN ===== -->
+    <div id="game-screen" class="screen">
+      <!-- Turn Indicator -->
+      <div id="turn-indicator" class="turn-indicator">🎮 Chuẩn bị...</div>
+
+      <!-- Opponents -->
+      <div id="opponents-area"></div>
+
+      <!-- Game Area -->
+      <div class="game-area">
+        <!-- Deck & Discard -->
+        <div class="table-area">
+          <div class="table-pile-wrapper">
+            <div id="deck-pile" class="deck-pile">
+              <span id="deck-count">0</span>
+            </div>
+            <div class="pile-label">Bộ bài</div>
+          </div>
+          <div class="table-divider">⚡</div>
+          <div class="table-pile-wrapper">
+            <div id="discard-pile">
+              <div class="empty-pile">Bài bỏ</div>
+            </div>
+            <div class="pile-label">Đã đánh</div>
+          </div>
+        </div>
+
+        <!-- Game Log -->
+        <div id="game-log">
+          <div id="log-messages"></div>
+        </div>
+      </div>
+
+      <!-- Player Hand Section -->
+      <div class="hand-section">
+        <div id="player-info"></div>
+        <div id="hand-area">
+          <div id="hand-cards"></div>
+        </div>
+        <div class="action-buttons">
+          <button id="draw-btn" disabled>📥 BỐC BÀI</button>
+          <button id="play-btn" disabled>🃏 Chọn bài để đánh</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== GAME OVER SCREEN ===== -->
+    <div id="game-over-screen" class="screen">
+      <div class="game-over-content">
+        <div class="game-over-avatar">😺</div>
+        <h2 class="game-over-title">GAME OVER</h2>
+        <p class="game-over-subtitle"></p>
+        <div class="game-over-stats"></div>
+        <div class="game-over-buttons">
+          <button class="restart-btn">🔄 Chơi Lại</button>
+          <button class="menu-btn">🏠 Menu Chính</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== OVERLAYS ===== -->
+    <!-- Modal -->
+    <div id="modal-overlay">
+      <div id="modal-content"></div>
+    </div>
+
+    <!-- Explosion -->
+    <div id="explosion-overlay">
+      <div id="particles"></div>
+      <div class="explosion-text">💣 BÙM! 💣</div>
+    </div>
+
+    <!-- Confetti -->
+    <div id="confetti-container"></div>
+  </div>
+
+  <!-- Scripts in dependency order -->
+  <script src="js/cards.js"></script>
+  <script src="js/sounds.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Initialize game when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      Game.init();
+    });
+  </script>
+</body>
+</html>
