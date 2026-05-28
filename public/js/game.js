@@ -387,7 +387,7 @@ const Game = {
       this.isProcessing = false;
       UI.renderAll();
       if (player.isHuman) UI.enablePlayerActions();
-      return;
+      return false; // Return false to indicate card play was blocked/negated
     }
 
     // Execute card effect
@@ -398,12 +398,13 @@ const Game = {
 
     // Check if turn ended (Skip, Attack)
     if (card.type === CardType.SKIP || card.type === CardType.ATTACK) {
-      return; // Turn already ended in resolveCardEffect
+      return true; // Return true to indicate card was successfully executed and ended turn
     }
 
     if (player.isHuman) {
       UI.enablePlayerActions();
     }
+    return true; // Return true to indicate successful execution
   },
 
   async executeCatPair(player, cards, target) {
@@ -800,16 +801,18 @@ const Game = {
       }
 
       if (decision.type === 'play') {
-        await this.executeCard(player, decision.card, decision.target);
+        const success = await this.executeCard(player, decision.card, decision.target);
         actionsPlayed++;
         await delay(600 + Math.random() * 400);
 
-        // Check if turn ended (Skip/Attack resolve handles this)
-        if (!player.isAlive || player.turnsToPlay <= 0) return;
+        if (success) {
+          // Check if turn ended (Skip/Attack resolve handles this)
+          if (!player.isAlive || player.turnsToPlay <= 0) return;
 
-        // If the card was Skip or Attack, turn is already handled
-        if (decision.card.type === CardType.SKIP || decision.card.type === CardType.ATTACK) {
-          return;
+          // If the card was Skip or Attack, turn is already handled
+          if (decision.card.type === CardType.SKIP || decision.card.type === CardType.ATTACK) {
+            return;
+          }
         }
       }
 

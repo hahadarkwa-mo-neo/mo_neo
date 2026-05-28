@@ -136,6 +136,12 @@ body {
   .opponent.pos-bottom-right {
     bottom: 130px !important;
   }
+
+  /* Optimize player hand layout for desktop view */
+  .hand-section {
+    width: calc(100% - 100px);
+    max-width: 950px;
+  }
 }
 
 
@@ -1930,8 +1936,8 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.5;
 }
 
-/* Show only on phone screens in portrait */
-@media (max-width: 899px) and (orientation: portrait) {
+/* Show only on phone screens in portrait (only mobile touch devices) */
+@media (max-width: 899px) and (orientation: portrait) and (hover: none) and (pointer: coarse) {
   .portrait-rotate-warning {
     display: flex;
   }
