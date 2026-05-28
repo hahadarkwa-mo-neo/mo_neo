@@ -229,21 +229,45 @@ const Game = {
       const card = this.currentPlayer.hand.find(c => c.id === cardId);
       if (!card) return;
 
-      // For cat cards, allow selecting pairs
+      // Check if it's a single playable card
+      const isSinglePlayable = [
+        CardType.SKIP,
+        CardType.ATTACK,
+        CardType.SEE_FUTURE,
+        CardType.SHUFFLE,
+        CardType.FAVOR
+      ].includes(card.type);
+
+      if (isSinglePlayable) {
+        // Play single card immediately!
+        this.selectedCards = [cardId];
+        UI.renderHand();
+        UI.updateActionButtons();
+        this.playSelectedCards();
+        return;
+      }
+
+      // Check if it's a cat card
       if (isCatCard(card.type)) {
-        const sameType = this.selectedCards.filter(id => {
+        // Find if we already have one cat card of the SAME type selected
+        const sameTypeSelected = this.selectedCards.filter(id => {
           const c = this.currentPlayer.hand.find(cc => cc.id === id);
           return c && c.type === card.type;
         });
-        if (sameType.length >= 1) {
-          // Already have one of this type selected, can't add more
-          // But replace if different cat type selected
-          this.selectedCards = [...sameType, cardId];
+
+        if (sameTypeSelected.length === 1) {
+          // We now have a pair! Select both and play immediately!
+          this.selectedCards = [sameTypeSelected[0], cardId];
+          UI.renderHand();
+          UI.updateActionButtons();
+          this.playSelectedCards();
+          return;
         } else {
+          // Just select this cat card
           this.selectedCards = [cardId];
         }
       } else {
-        // For non-cat cards, select only one
+        // For other unplayable cards (like DEFUSE, NOPE when not reactive, etc.), just select it normally
         this.selectedCards = [cardId];
       }
     }

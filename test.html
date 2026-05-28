@@ -62,14 +62,14 @@
     }
 
     // Test deck creation for different player counts
-    for (let n = 2; n <= 4; n++) {
+    for (let n = 2; n <= 5; n++) {
       const d = createDeck(n);
       // Non-EK, non-Defuse cards: 4+4+5+4+5+4+4+4+4+4 = 42
       assert(d.length === 42, `createDeck(${n}) creates 42 base cards`);
     }
 
     // Test dealing
-    for (let n = 2; n <= 4; n++) {
+    for (let n = 2; n <= 5; n++) {
       const d = createDeck(n);
       const h = dealCards(d, n);
       assert(h.length === n, `dealCards(${n}) creates ${n} hands`);
