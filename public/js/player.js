@@ -3,9 +3,9 @@
  * Mèo Nổ (Exploding Kittens) Browser Game
  */
 
-const PLAYER_AVATARS = ['😺', '😸', '😹', '😻'];
-const PLAYER_NAMES = ['Bạn', 'Bot Miu', 'Bot Meow', 'Bot Nyaa'];
-const PLAYER_COLORS = ['#00d4ff', '#ff6b35', '#00ff88', '#c084fc'];
+const PLAYER_AVATARS = ['😺', '😸', '😹', '😻', '😼'];
+const PLAYER_NAMES = ['Bạn', 'Bot Miu', 'Bot Meow', 'Bot Nyaa', 'Bot Neko'];
+const PLAYER_COLORS = ['#00d4ff', '#ff6b35', '#00ff88', '#c084fc', '#fbbf24'];
 
 class Player {
   constructor(index, isHuman = false) {

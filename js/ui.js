@@ -273,7 +273,7 @@ const UI = {
         for (let i = 0; i < displayCount; i++) {
           const cardBack = document.createElement('div');
           cardBack.className = 'mini-card-back';
-          cardBack.style.transform = `translateX(${i * 12}px)`;
+          cardBack.style.transform = `translateX(${i * 5}px)`;
           cardBacks.appendChild(cardBack);
         }
         if (player.cardCount > 8) {
