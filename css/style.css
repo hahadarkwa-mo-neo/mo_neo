@@ -69,11 +69,28 @@ body {
 #app {
   width: 100%;
   height: 100%;
-  max-width: 500px;
+  max-width: 100vw;
+  max-height: 100vh;
   position: relative;
   overflow: hidden;
   background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
 }
+
+@media (min-width: 769px) {
+  #app {
+    width: 95vw;
+    height: 90vh;
+    max-width: 1200px;
+    max-height: 750px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(124, 58, 237, 0.15);
+    margin: auto;
+  }
+}
+
 
 /* ===== Screen Management ===== */
 .screen {
@@ -344,6 +361,9 @@ input[type="range"]::-moz-range-thumb {
   padding-top: var(--safe-top);
   padding-bottom: var(--safe-bottom);
   position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #game-screen::before {
@@ -351,81 +371,105 @@ input[type="range"]::-moz-range-thumb {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 40%, rgba(124, 58, 237, 0.05) 0%, transparent 60%);
+    radial-gradient(circle at 50% 40%, rgba(124, 58, 237, 0.08) 0%, transparent 60%);
   pointer-events: none;
 }
 
-/* Turn indicator */
+/* Turn indicator capsule */
 .turn-indicator {
-  text-align: center;
-  padding: 8px 16px;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  border-radius: 30px;
+  padding: 8px 24px;
   font-size: 14px;
-  font-weight: 700;
-  background: var(--bg-secondary);
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition-normal);
-  min-height: 38px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all var(--transition-normal);
+  min-height: 40px;
 }
 
 .turn-indicator.your-turn {
-  background: linear-gradient(90deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.15));
-  border-bottom-color: var(--neon-cyan);
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), rgba(124, 58, 237, 0.2));
+  border-color: var(--neon-cyan);
   color: var(--neon-cyan);
   animation: turnPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
 }
 
 .turn-indicator.ai-turn {
-  background: var(--bg-secondary);
-  border-bottom-color: var(--neon-orange);
+  background: rgba(18, 18, 42, 0.8);
+  border-color: var(--neon-orange);
   color: var(--neon-orange);
 }
 
 @keyframes turnPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.85; transform: translateX(-50%) scale(1.02); }
 }
 
-/* ===== Opponents Area ===== */
+/* ===== Opponents Area (Corner positioning) ===== */
 #opponents-area {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  min-height: 85px;
-}
-
-#opponents-area::-webkit-scrollbar {
-  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .opponent {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-glass);
-  border-radius: 14px;
-  padding: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.05);
-  transition: all var(--transition-normal);
+  position: absolute;
+  pointer-events: auto;
+  width: 180px;
+  height: 85px;
+  background: rgba(18, 18, 42, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 8px 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
+}
+
+.opponent.pos-1 {
+  top: 70px;
+  left: 20px;
+}
+
+.opponent.pos-2 {
+  top: 70px;
+  right: 20px;
+}
+
+.opponent.pos-3 {
+  bottom: 20px;
+  right: 20px;
 }
 
 .opponent.active-turn {
   border-color: var(--neon-orange);
-  box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
   animation: opponentTurn 1.5s ease-in-out infinite;
 }
 
 @keyframes opponentTurn {
-  0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 53, 0.2); }
-  50% { box-shadow: 0 0 25px rgba(255, 107, 53, 0.5); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
 }
 
 .opponent.dead {
@@ -443,15 +487,19 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   border: 2px solid;
   background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .opponent-info {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
 .opponent-name {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -464,13 +512,14 @@ input[type="range"]::-moz-range-thumb {
 .opponent-card-backs {
   display: flex;
   position: relative;
-  height: 16px;
+  height: 18px;
+  width: 40px;
   margin-top: 2px;
 }
 
 .mini-card-back {
-  width: 11px;
-  height: 16px;
+  width: 12px;
+  height: 18px;
   background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
   border-radius: 2px;
   position: absolute;
@@ -479,38 +528,98 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .more-cards {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-muted);
+  font-weight: 700;
   margin-left: auto;
   position: absolute;
   right: -20px;
   top: 2px;
 }
 
-/* ===== Game Area (Center) ===== */
+/* ===== Human Player Info Corner (Bottom Left) ===== */
+#player-info {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  pointer-events: auto;
+  width: 180px;
+  height: 85px;
+  background: rgba(18, 18, 42, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 212, 255, 0.1);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#player-info.active-turn {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  animation: playerTurnPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes playerTurnPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* ===== Game Area (Center Mat) ===== */
 .game-area {
-  flex: 1;
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 480px;
   display: flex;
   flex-direction: column;
-  padding: 10px 16px;
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
+  align-items: center;
+  gap: 12px;
+  z-index: 5;
+  pointer-events: none;
 }
 
 .table-area {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 16px 36px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  padding: 15px 0;
+  gap: 30px;
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.01), 0 20px 50px rgba(0, 0, 0, 0.5);
+  position: relative;
+  width: 100%;
+}
+
+.table-area::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.15));
+  z-index: -1;
+  opacity: 0.8;
+  filter: blur(4px);
+  pointer-events: none;
 }
 
 .table-pile-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .pile-label {
@@ -518,13 +627,13 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 }
 
 .table-divider {
   font-size: 20px;
-  opacity: 0.3;
-  margin-bottom: 20px;
+  opacity: 0.25;
+  margin-bottom: 22px;
 }
 
 /* Deck Pile */
@@ -541,15 +650,15 @@ input[type="range"]::-moz-range-thumb {
   position: relative;
   transition: transform var(--transition-fast), box-shadow var(--transition-normal);
   box-shadow: var(--shadow-card),
-              3px 3px 0 rgba(200, 50, 50, 0.3),
-              6px 6px 0 rgba(150, 30, 30, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.15);
+              2px 2px 0 rgba(200, 50, 50, 0.3),
+              4px 4px 0 rgba(150, 30, 30, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .deck-pile::before {
   content: '🐱';
   font-size: 32px;
-  filter: brightness(0.8);
+  filter: brightness(0.85);
 }
 
 .deck-pile::after {
@@ -561,8 +670,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .deck-pile:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-card), 0 0 20px rgba(255, 46, 99, 0.4);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card), 0 0 25px rgba(255, 46, 99, 0.5);
 }
 
 .deck-pile:active {
@@ -574,6 +683,7 @@ input[type="range"]::-moz-range-thumb {
   pointer-events: none;
   background: var(--bg-tertiary);
   box-shadow: none;
+  border-style: dashed;
 }
 
 .deck-pile.empty::before {
@@ -595,7 +705,7 @@ input[type="range"]::-moz-range-thumb {
 
 @keyframes dangerPulse {
   0%, 100% { box-shadow: var(--shadow-card); }
-  50% { box-shadow: var(--shadow-card), 0 0 30px rgba(255, 46, 99, 0.6); }
+  50% { box-shadow: var(--shadow-card), 0 0 25px rgba(255, 46, 99, 0.7); }
 }
 
 .deck-pile.shuffling {
@@ -604,9 +714,9 @@ input[type="range"]::-moz-range-thumb {
 
 @keyframes shuffleAnim {
   0% { transform: rotate(0deg); }
-  25% { transform: rotate(5deg) scale(1.05); }
-  50% { transform: rotate(-5deg) scale(1.05); }
-  75% { transform: rotate(3deg); }
+  25% { transform: rotate(8deg) scale(1.06); }
+  50% { transform: rotate(-8deg) scale(1.06); }
+  75% { transform: rotate(4deg); }
   100% { transform: rotate(0deg); }
 }
 
@@ -618,14 +728,14 @@ input[type="range"]::-moz-range-thumb {
   color: var(--neon-cyan);
   font-size: 12px;
   font-weight: 800;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--neon-cyan);
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
 }
 
 /* Discard Pile */
@@ -638,6 +748,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   position: relative;
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .empty-pile {
@@ -671,16 +782,17 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-/* ===== Game Log ===== */
+/* ===== Game Log (Under table) ===== */
 #game-log {
-  flex: 1;
-  min-height: 60px;
-  max-height: 100px;
-  background: var(--bg-secondary);
+  pointer-events: auto;
+  width: 100%;
+  height: 60px;
+  background: rgba(10, 10, 26, 0.5);
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 #log-messages {
@@ -690,7 +802,7 @@ input[type="range"]::-moz-range-thumb {
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 #log-messages::-webkit-scrollbar {
@@ -702,14 +814,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #log-messages::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
 
 .log-message {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.3;
   transition: color var(--transition-normal);
   animation: fadeIn 0.3s ease;
 }
@@ -720,88 +832,78 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== Player Hand Area ===== */
+/* ===== Player Hand Area (Bottom-Center fanned cards) ===== */
 .hand-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 8px 0;
-  padding-bottom: calc(8px + var(--safe-bottom));
-}
-
-#player-info {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 400px);
+  max-width: 650px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px 6px;
-}
-
-.player-avatar-main {
-  font-size: 24px;
-}
-
-.player-name-main {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--neon-cyan);
-}
-
-.player-card-count {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-left: auto;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  z-index: 20;
 }
 
 /* Hand Cards */
 #hand-area {
   position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 #hand-cards {
   display: flex;
-  gap: 6px;
-  padding: 4px 16px 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  gap: -15px; /* Overlap cards slightly like a fan! */
+  padding: 15px 30px;
+  overflow: visible;
+  justify-content: center;
+  width: 100%;
   scrollbar-width: none;
-  -ms-overflow-style: none;
-  min-height: calc(var(--card-height) + 10px);
-  scroll-snap-type: x mandatory;
 }
 
 #hand-cards::-webkit-scrollbar {
   display: none;
 }
 
-/* Action Buttons */
+/* Action Buttons (Smooth opening/sliding) */
 .action-buttons {
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
   padding: 0 16px;
-  padding-bottom: 4px;
-  position: relative;
+  width: 100%;
+  margin-top: -5px;
 }
 
 #draw-btn {
-  flex: 1;
-  padding: 12px 16px;
+  flex: 0 1 180px;
+  padding: 12px 24px;
   border: none;
   border-radius: 12px;
   font-family: inherit;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
   color: white;
   background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: 0 3px 15px rgba(0, 212, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 #draw-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
 }
 
 #draw-btn:active:not(:disabled) {
@@ -815,37 +917,38 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #play-btn {
-  flex: 1;
-  padding: 12px 16px;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  max-width: 0;
+  padding: 12px 0;
+  margin: 0;
+  overflow: hidden;
   border: none;
   border-radius: 12px;
   font-family: inherit;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
   color: white;
   background: linear-gradient(135deg, var(--neon-green), #00b368);
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow: 0 3px 15px rgba(0, 255, 136, 0.3);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px) scale(0.9);
   white-space: nowrap;
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(100% + 8px);
-  z-index: 20;
+  letter-spacing: 0.5px;
 }
 
 #play-btn.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  max-width: 220px;
+  padding: 12px 24px;
+  margin-left: 12px;
 }
 
 #play-btn:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
 }
 
 #play-btn:active:not(:disabled) {
@@ -1595,87 +1698,132 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ============================================================
-   RESPONSIVE
+   RESPONSIVE & LAYOUT UTILITIES
    ============================================================ */
 
 /* Small phones */
 @media (max-width: 360px) {
   :root {
-    --card-width: 70px;
-    --card-height: 100px;
-    --card-radius: 10px;
-  }
-
-  .logo-emoji { font-size: 60px; }
-  .logo-title { font-size: 32px; }
-
-  .card-emoji { font-size: 26px; }
-  .card-name { font-size: 9px; }
-  .card-desc { font-size: 6px; }
-
-  .explosion-text { font-size: 18px; }
-}
-
-/* Tablets and larger */
-@media (min-width: 769px) {
-  :root {
-    --card-width: 100px;
-    --card-height: 140px;
-  }
-
-  #app {
-    max-width: 500px;
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .card-emoji { font-size: 38px; }
-  .card-name { font-size: 12px; }
-  .card-desc { font-size: 8px; }
-}
-
-/* Landscape mode */
-@media (max-height: 500px) and (orientation: landscape) {
-  :root {
-    --card-height: 90px;
     --card-width: 65px;
+    --card-height: 90px;
+    --card-radius: 8px;
   }
 
-  #opponents-area {
-    min-height: 60px;
-    padding: 6px;
-  }
+  .logo-emoji { font-size: 50px; }
+  .logo-title { font-size: 28px; }
+  .card-emoji { font-size: 22px; }
+  .card-name { font-size: 8px; }
+  .card-desc { font-size: 5px; }
+  .explosion-text { font-size: 16px; }
+  .opponent { width: 140px; height: 75px; padding: 6px 10px; }
+  #player-info { width: 140px; height: 75px; padding: 6px 10px; }
+}
 
-  .opponent-avatar {
-    font-size: 20px;
-    width: 30px;
-    height: 30px;
-  }
-
-  .table-area {
-    padding: 5px 0;
-  }
-
-  #game-log {
-    max-height: 50px;
-    min-height: 40px;
-  }
-
-  .hand-section {
-    padding: 4px 0;
-  }
-
-  #hand-cards {
-    min-height: calc(var(--card-height) + 5px);
-    padding: 2px 12px;
-  }
-
-  .action-buttons {
-    padding: 0 12px 2px;
+/* Tablets and Widescreen Desktop cards scaling */
+@media (min-width: 992px) {
+  :root {
+    --card-width: 90px;
+    --card-height: 128px;
+    --card-radius: 12px;
   }
 }
 
-/* Dark mode scrollbar */
+/* Portrait orientation rotate warning overlay */
+.portrait-rotate-warning {
+  position: fixed;
+  inset: 0;
+  background: #070712;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+}
+
+.rotate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.rotate-emoji {
+  font-size: 64px;
+  animation: spinRotate 2s linear infinite;
+  display: inline-block;
+  filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
+}
+
+@keyframes spinRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.rotate-content h3 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.rotate-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+/* Show only on phone screens in portrait */
+@media (max-width: 899px) and (orientation: portrait) {
+  .portrait-rotate-warning {
+    display: flex;
+  }
+}
+
+/* ============================================================
+   FLOATING FLYING CARDS
+   ============================================================ */
+.floating-card {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: var(--card-radius);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 46, 99, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: white;
+  transform-style: preserve-3d;
+  background-size: cover;
+  padding: 8px 6px;
+  box-sizing: border-box;
+}
+
+.floating-card.face-down {
+  background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+}
+
+.floating-card-emoji {
+  font-size: 28px;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.floating-card-name {
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  line-height: 1.2;
+}
+
+/* Dark mode scrollbars */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -1688,4 +1836,8 @@ input[type="range"]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

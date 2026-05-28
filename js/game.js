@@ -445,13 +445,16 @@ const Game = {
     } else {
       // Normal card
       player.addCard(card);
+      
+      // Animate card draw for BOTH human and AI players!
+      UI.animateCardDraw(card, player);
+      
       if (player.isHuman) {
         this.addLog(`📥 Bạn bốc được: ${card.emoji} ${card.name}`);
-        UI.animateCardDraw(card);
       } else {
         this.addLog(`📥 ${player.name} bốc 1 lá bài`);
       }
-      await delay(400);
+      await delay(600);
 
       // End turn
       player.turnsToPlay--;

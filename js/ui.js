@@ -210,7 +210,7 @@ const UI = {
       if (player.isHuman) continue;
 
       const div = document.createElement('div');
-      div.className = `opponent ${player.isAlive ? '' : 'dead'} ${
+      div.className = `opponent pos-${player.index} ${player.isAlive ? '' : 'dead'} ${
         Game.currentPlayerIndex === player.index ? 'active-turn' : ''
       }`;
       div.dataset.playerIndex = player.index;
@@ -388,10 +388,15 @@ const UI = {
     if (!player) return;
 
     const info = this.els.playerInfo;
+    const isActive = Game.currentPlayerIndex === 0 ? 'active-turn' : '';
+    info.className = `player-info-corner ${player.isAlive ? '' : 'dead'} ${isActive}`;
+    
     info.innerHTML = `
-      <span class="player-avatar-main">${player.isAlive ? player.avatar : '💀'}</span>
-      <span class="player-name-main">${player.name}</span>
-      <span class="player-card-count">🃏 ${player.cardCount}</span>
+      <div class="opponent-avatar" style="border-color: ${player.color}">${player.isAlive ? player.avatar : '💀'}</div>
+      <div class="opponent-info">
+        <div class="opponent-name" style="color: ${player.color}">${player.name}</div>
+        <div class="opponent-cards">🃏 ${player.cardCount} lá</div>
+      </div>
     `;
   },
 
@@ -481,40 +486,116 @@ const UI = {
 
   // ===== Animations =====
 
-  animateCardPlay(card, player) {
-    // Create floating card that flies to discard pile
+  _flyCard(faceUp, card, fromEl, toEl, callback) {
+    if (!fromEl || !toEl) {
+      if (callback) callback();
+      return;
+    }
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+
+    // Create floating element
     const floater = document.createElement('div');
-    floater.className = 'card floating-card card-play-anim';
-    const [c1, c2] = card.gradient;
-    floater.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-    floater.innerHTML = `
-      <div class="card-emoji">${card.emoji}</div>
-      <div class="card-name">${card.name}</div>
-    `;
+    floater.className = `floating-card ${faceUp ? 'face-up' : 'face-down'}`;
+    
+    // Center calculations (card sizes approx width: 85px, height: 120px)
+    const startX = fromRect.left + fromRect.width / 2 - 42;
+    const startY = fromRect.top + fromRect.height / 2 - 60;
+    
+    floater.style.left = `${startX}px`;
+    floater.style.top = `${startY}px`;
+    floater.style.transform = `scale(0.5) rotate(${Math.random() * 10 - 5}deg)`;
+    floater.style.opacity = '0';
+    
+    if (faceUp && card) {
+      const gradient = card.gradient || ['#ff2e63', '#ff6b35'];
+      floater.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
+      floater.innerHTML = `
+        <div class="floating-card-emoji">${card.emoji}</div>
+        <div class="floating-card-name">${card.name}</div>
+      `;
+    } else {
+      floater.innerHTML = `
+        <div class="card-back-pattern">
+          <span>🐱</span>
+          <span>💣</span>
+        </div>
+      `;
+    }
 
     document.body.appendChild(floater);
 
-    // Animate to discard pile
+    // Force reflow
+    floater.offsetHeight;
+
+    // Trigger flight
+    floater.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.4, 1)';
+    
     requestAnimationFrame(() => {
-      floater.classList.add('played');
-      setTimeout(() => floater.remove(), 600);
+      const destX = toRect.left + toRect.width / 2 - 42;
+      const destY = toRect.top + toRect.height / 2 - 60;
+      
+      floater.style.left = `${destX}px`;
+      floater.style.top = `${destY}px`;
+      floater.style.transform = `scale(1) rotate(${Math.random() * 20 - 10}deg)`;
+      floater.style.opacity = '1';
     });
+
+    // Clean up
+    setTimeout(() => {
+      floater.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+      floater.style.opacity = '0';
+      floater.style.transform = `scale(0.85) rotate(${Math.random() * 30 - 15}deg)`;
+      
+      setTimeout(() => {
+        floater.remove();
+        if (callback) callback();
+      }, 250);
+    }, 600);
   },
 
-  animateCardDraw(card) {
-    const handContainer = this.els.handCards;
-    if (!handContainer) return;
+  animateCardPlay(card, player) {
+    let fromEl;
+    if (player.isHuman) {
+      const cardEl = document.querySelector(`.card[data-card-id="${card.id}"]`);
+      fromEl = cardEl || this.els.playerInfo;
+    } else {
+      fromEl = document.querySelector(`.opponent.pos-${player.index}`);
+    }
+    
+    const toEl = this.els.discardArea;
+    this._flyCard(true, card, fromEl, toEl);
+  },
 
-    // Flash effect on new card
-    setTimeout(() => {
-      const cards = handContainer.querySelectorAll('.card');
-      if (cards.length > 0) {
-        const last = cards[cards.length - 1];
-        last.classList.add('new-card');
-        setTimeout(() => last.classList.remove('new-card'), 600);
+  animateCardDraw(card, player) {
+    const fromEl = this.els.deckArea;
+    let toEl;
+    
+    const targetPlayer = player || Game.players[0];
+    
+    if (targetPlayer.isHuman) {
+      toEl = this.els.handCards;
+    } else {
+      toEl = document.querySelector(`.opponent.pos-${targetPlayer.index}`);
+    }
+    
+    this._flyCard(false, card, fromEl, toEl, () => {
+      if (targetPlayer.isHuman) {
+        const handContainer = this.els.handCards;
+        setTimeout(() => {
+          const cards = handContainer.querySelectorAll('.card');
+          if (cards.length > 0) {
+            const last = cards[cards.length - 1];
+            last.classList.add('new-card');
+            setTimeout(() => last.classList.remove('new-card'), 600);
+          }
+          this.renderHand();
+        }, 50);
+      } else {
+        this.renderOpponents();
       }
-      this.renderHand();
-    }, 100);
+    });
   },
 
   animateShuffle() {
