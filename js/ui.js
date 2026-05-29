@@ -1796,7 +1796,6 @@ const UI = {
     }
   },
 
-  // ===== B3: Fullscreen Setup =====
   setupFullscreen() {
     const btn = this.els.fullscreenBtn || document.getElementById('fullscreen-btn');
     if (!btn) return;
@@ -1805,6 +1804,28 @@ const UI = {
       const isFS = !!document.fullscreenElement;
       btn.textContent = isFS ? '✕' : '⛶';
       btn.title = isFS ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+
+      // Auto orientation lock to landscape when entering fullscreen
+      if (isFS) {
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+          try {
+            screen.orientation.lock('landscape').catch(err => {
+              console.log('[Fullscreen] Orientation lock not supported or rejected:', err);
+            });
+          } catch (e) {
+            console.warn('[Fullscreen] Orientation lock error caught:', e);
+          }
+        }
+      } else {
+        // Unlock orientation on exiting fullscreen
+        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+          try {
+            screen.orientation.unlock();
+          } catch (e) {
+            console.warn('[Fullscreen] Orientation unlock error caught:', e);
+          }
+        }
+      }
     };
 
     btn.onclick = () => {
