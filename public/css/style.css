@@ -2694,8 +2694,8 @@ input[type="range"]::-moz-range-thumb {
 /* Landscape mobile / viewports with height <= 580px */
 @media (max-height: 580px) {
   :root {
-    --card-width: 58px;
-    --card-height: 82px;
+    --card-width: 54px;
+    --card-height: 76px;
     --card-radius: 8px;
   }
 
@@ -2711,45 +2711,47 @@ input[type="range"]::-moz-range-thumb {
 
   /* ---- Opponents ---- */
   .opponent {
-    width: 130px;
-    height: 55px;
-    padding: 4px 8px;
-    border-radius: 12px;
-    gap: 6px;
+    width: 125px !important;
+    height: 46px !important;
+    padding: 3px 6px !important;
+    border-radius: 10px !important;
+    gap: 5px !important;
   }
   .opponent-avatar {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 16px !important;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
     border-width: 2px !important;
   }
-  .opponent-name { font-size: 11px !important; }
-  .opponent-cards { font-size: 10px !important; }
+  .opponent-name { font-size: 10px !important; }
+  .opponent-cards { font-size: 9px !important; }
 
   .opponent.pos-1, .opponent.pos-top-left { top: 36px !important; left: 8px !important; }
   .opponent.pos-2, .opponent.pos-top-right { top: 36px !important; right: 8px !important; }
-  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 88px !important; right: 8px !important; }
+  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 76px !important; right: 8px !important; }
   .opponent.pos-top-center, .opponent.pos-top-middle { top: 36px !important; }
 
   /* ---- Player Info ---- */
   #player-info {
-    width: 130px !important;
-    height: 55px !important;
-    padding: 4px 8px !important;
-    bottom: 88px !important;
+    width: 125px !important;
+    height: 46px !important;
+    padding: 3px 6px !important;
+    bottom: 76px !important;
     left: 8px !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
   }
 
   /* ---- Game Area (Deck + Discard) ---- */
   .game-area {
-    width: 300px;
-    gap: 4px;
+    width: 280px !important;
+    gap: 4px !important;
+    top: 43% !important;
+    transform: translate(-50%, -50%) !important;
   }
   .table-area {
-    padding: 6px 16px;
-    gap: 12px;
-    border-radius: 16px;
+    padding: 5px 12px !important;
+    gap: 10px !important;
+    border-radius: 14px !important;
   }
   .table-pile-wrapper { gap: 3px; }
   .pile-label {
@@ -2770,12 +2772,12 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* ---- Card Content (text inside cards) ---- */
-  .card-emoji { font-size: 22px !important; margin-bottom: 2px !important; }
+  .card-emoji { font-size: 20px !important; margin-bottom: 1px !important; }
   .card-name { font-size: 8px !important; }
   .card-desc { display: none !important; } /* Hide desc on small screens */
   .card-pattern { font-size: 9px !important; top: 3px !important; left: 3px !important; }
-  .card.face-up { padding: 5px 4px !important; }
-  .card-back-pattern { font-size: 18px !important; }
+  .card.face-up { padding: 4px 3px !important; }
+  .card-back-pattern { font-size: 16px !important; }
 
   /* ---- Hand Cards Tighter ---- */
   #hand-cards .card {
@@ -2787,19 +2789,19 @@ input[type="range"]::-moz-range-thumb {
 
   /* ---- Action Buttons Smaller ---- */
   .action-buttons {
-    gap: 6px !important;
+    gap: 5px !important;
     padding: 0 8px !important;
-    margin-top: -2px !important;
+    margin-top: -1px !important;
   }
   #draw-btn {
-    padding: 8px 14px !important;
-    font-size: 12px !important;
-    border-radius: 10px !important;
+    padding: 7px 12px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
   }
   #play-btn {
-    padding: 8px 14px !important;
-    font-size: 12px !important;
-    border-radius: 10px !important;
+    padding: 7px 12px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
   }
 
   /* ---- Hand Section ---- */
@@ -2807,22 +2809,22 @@ input[type="range"]::-moz-range-thumb {
     padding-bottom: calc(4px + var(--safe-bottom)) !important;
   }
   #hand-cards {
-    padding: 8px 12px !important;
+    padding: 10px 12px 6px 12px !important;
   }
 
   /* ---- Game Log ---- */
   #game-log {
-    height: 38px;
+    height: 32px !important;
   }
   .log-message {
-    font-size: 9px !important;
+    font-size: 8.5px !important;
   }
 
   /* ---- Sound + Fullscreen Buttons ---- */
   .sound-toggle, .fullscreen-btn {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 15px !important;
     border-radius: 10px !important;
     top: 4px !important;
   }
@@ -2830,15 +2832,6 @@ input[type="range"]::-moz-range-thumb {
   .fullscreen-btn { right: 48px !important; }
 
   /* Selected card - no override needed, base styles already unified */
-
-  /* ---- B1: Drop Zone ---- */
-  .swipe-drop-zone {
-    top: 30% !important;
-    width: 140px !important;
-    height: 50px !important;
-    border-radius: 14px !important;
-  }
-  .drop-zone-text { font-size: 11px !important; }
 
   /* ---- B6: Turn Flash ---- */
   .turn-flash-overlay {
@@ -2888,9 +2881,9 @@ input[type="range"]::-moz-range-thumb {
 /* Extra small landscape (height <= 380px, e.g. iPhone SE landscape) */
 @media (max-height: 380px) {
   :root {
-    --card-width: 50px;
-    --card-height: 70px;
-    --card-radius: 7px;
+    --card-width: 46px;
+    --card-height: 64px;
+    --card-radius: 6px;
   }
 
   .turn-indicator {
@@ -2902,51 +2895,63 @@ input[type="range"]::-moz-range-thumb {
 
   .opponent {
     width: 110px !important;
-    height: 45px !important;
-    padding: 3px 6px !important;
+    height: 38px !important;
+    padding: 2px 4px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
   }
   .opponent-avatar {
-    width: 26px !important;
-    height: 26px !important;
-    font-size: 13px !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
   }
 
   #player-info {
     width: 110px !important;
-    height: 45px !important;
-    bottom: 76px !important;
+    height: 38px !important;
+    padding: 2px 4px !important;
+    bottom: 64px !important;
+    border-radius: 8px !important;
   }
 
-  .opponent.pos-1, .opponent.pos-top-left { top: 28px !important; }
-  .opponent.pos-2, .opponent.pos-top-right { top: 28px !important; }
-  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 76px !important; }
+  .opponent.pos-1, .opponent.pos-top-left { top: 24px !important; }
+  .opponent.pos-2, .opponent.pos-top-right { top: 24px !important; }
+  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 64px !important; }
 
-  .game-area { width: 240px; }
-  .table-area { padding: 4px 12px; gap: 10px; }
-  .deck-pile::before { font-size: 18px !important; }
+  .game-area {
+    width: 220px !important;
+    top: 41% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+  .table-area {
+    padding: 4px 10px !important;
+    gap: 8px !important;
+  }
+  .deck-pile::before { font-size: 16px !important; }
   .deck-pile::after { font-size: 10px !important; }
 
-  .card-emoji { font-size: 18px !important; }
+  .card-emoji { font-size: 16px !important; }
   .card-name { font-size: 7px !important; }
 
   #hand-cards .card { margin-left: -14px !important; }
-  #hand-cards { padding: 6px 8px !important; }
+  #hand-cards { padding: 8px 8px 4px 8px !important; }
 
   .action-buttons { gap: 4px !important; }
   #draw-btn, #play-btn {
-    padding: 6px 10px !important;
-    font-size: 11px !important;
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+    border-radius: 6px !important;
   }
 
-  #game-log { height: 30px; }
+  #game-log { height: 26px !important; }
   .log-message { font-size: 8px !important; }
 
   .sound-toggle, .fullscreen-btn {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 13px !important;
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
   }
-  .fullscreen-btn { right: 40px !important; }
+  .fullscreen-btn { right: 36px !important; }
 }
 
 /* ============================================================
@@ -3028,7 +3033,7 @@ input[type="range"]::-moz-range-thumb {
     overflow-x: auto;
     overflow-y: visible;
     justify-content: flex-start;
-    padding: 12px 20px;
+    padding: 18px 20px 12px 20px;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -3102,90 +3107,18 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ============================================================
-   B1: SWIPE DROP ZONE & CARD DRAGGING
+   B1: CARD SHAKE INVALID ANIMATION
    ============================================================ */
-.swipe-drop-zone {
-  position: absolute;
-  top: 35%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 80px;
-  border-radius: 20px;
-  border: 2px dashed rgba(0, 255, 136, 0.3);
-  background: rgba(0, 255, 136, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 25;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+#hand-cards .card.shake-invalid {
+  animation: shakeReject 0.4s ease;
 }
 
-.swipe-drop-zone.active {
-  opacity: 1;
-}
-
-.swipe-drop-zone.ready {
-  border-color: rgba(0, 255, 136, 0.8);
-  background: rgba(0, 255, 136, 0.12);
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
-  transform: translate(-50%, -50%) scale(1.05);
-}
-
-.drop-zone-text {
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(0, 255, 136, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: color 0.2s ease;
-}
-
-.swipe-drop-zone.ready .drop-zone-text {
-  color: var(--neon-green);
-}
-
-/* Card being dragged */
-#hand-cards .card.dragging {
-  z-index: 200;
-  transition: none !important;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 136, 0.3);
-  opacity: 0.9;
-}
-
-#hand-cards .card.swipe-invalid {
-  animation: swipeReject 0.4s ease;
-}
-
-@keyframes swipeReject {
+@keyframes shakeReject {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   20% { transform: translateX(-8px) rotate(-2deg); }
   40% { transform: translateX(8px) rotate(2deg); }
   60% { transform: translateX(-5px) rotate(-1deg); }
   80% { transform: translateX(5px) rotate(1deg); }
-}
-
-/* ============================================================
-   B2: CAT PAIR MAGNET ANIMATION
-   ============================================================ */
-.card.magnet-fly {
-  position: fixed !important;
-  z-index: 9999 !important;
-  transition: all 0.4s cubic-bezier(0.25, 1, 0.4, 1) !important;
-  pointer-events: none !important;
-  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5), 0 0 20px rgba(124, 58, 237, 0.3) !important;
-}
-
-.card.magnet-glow {
-  animation: magnetGlow 0.6s ease-in-out;
-}
-
-@keyframes magnetGlow {
-  0% { box-shadow: var(--shadow-card); }
-  50% { box-shadow: 0 0 25px rgba(124, 58, 237, 0.6), 0 0 50px rgba(124, 58, 237, 0.3); }
-  100% { box-shadow: var(--shadow-card); }
 }
 
 /* ============================================================
@@ -3376,8 +3309,9 @@ input[type="range"]::-moz-range-thumb {
     padding-bottom: calc(4px + var(--safe-bottom)) !important;
   }
   #hand-cards {
-    padding: 6px 10px !important;
+    padding: 16px 10px 6px 10px !important;
     overflow-x: auto !important;
+    overflow-y: visible !important;
     justify-content: flex-start !important;
   }
   #hand-cards .card {
@@ -3412,13 +3346,6 @@ input[type="range"]::-moz-range-thumb {
   /* Game log */
   #game-log { height: 32px !important; }
   .log-message { font-size: 9px !important; }
-
-  /* Swipe drop zone */
-  .swipe-drop-zone {
-    top: 28% !important;
-    width: 130px !important;
-    height: 45px !important;
-  }
 
   /* Turn flash */
   .turn-flash-overlay { font-size: 16px !important; }

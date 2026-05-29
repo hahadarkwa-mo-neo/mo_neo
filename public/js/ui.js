@@ -64,7 +64,6 @@ const UI = {
       // B1-B8 new elements
       fullscreenBtn: document.getElementById('fullscreen-btn'),
       turnFlash: document.getElementById('turn-flash'),
-      swipeDropZone: document.getElementById('swipe-drop-zone'),
     };
   },
 
@@ -390,30 +389,69 @@ const UI = {
         }
       }
 
-      // Tap to select/deselect
+      // Tap to select/deselect OR Double-tap to play
       el.onclick = (e) => {
         e.stopPropagation();
-        if (this._longPressTriggered || this._swipeActive) {
+        if (this._longPressTriggered) {
           this._longPressTriggered = false;
-          this._swipeActive = false;
           return;
         }
-        if (Game.currentPlayer.isHuman && !Game.isProcessing) {
+
+        if (!Game.currentPlayer.isHuman || Game.isProcessing) return;
+
+        const now = Date.now();
+        if (this._lastTapCardId === card.id && (now - this._lastTapTime) < 300) {
+          // Double tap quick play
+          this._lastTapCardId = null;
+          this._lastTapTime = 0;
+
+          const isSinglePlayable = [
+            CardType.SKIP, CardType.ATTACK, CardType.SEE_FUTURE,
+            CardType.SHUFFLE, CardType.FAVOR
+          ].includes(card.type);
+
+          const isCat = isCatCard(card.type);
+
+          if (isSinglePlayable) {
+            this.haptic(30);
+            Game.selectedCards = [card.id];
+            Game.playSelectedCards();
+          } else if (isCat) {
+            // Find another cat of the same type in hand
+            const match = player.hand.find(c => c.id !== card.id && c.type === card.type);
+            if (match) {
+              this.haptic(30);
+              Game.selectedCards = [card.id, match.id];
+              Game.playSelectedCards();
+            } else {
+              // Shake card if no match
+              this.haptic([50, 30, 50]);
+              el.classList.add('shake-invalid');
+              setTimeout(() => el.classList.remove('shake-invalid'), 400);
+            }
+          } else {
+            // Not playable (Defuse, Nope, EK) -> Shake card
+            this.haptic([50, 30, 50]);
+            el.classList.add('shake-invalid');
+            setTimeout(() => el.classList.remove('shake-invalid'), 400);
+          }
+        } else {
+          // First tap: Select/Deselect card
+          this._lastTapCardId = card.id;
+          this._lastTapTime = now;
           this.haptic(10);
           Sounds.click();
           Game.selectCard(card.id);
         }
       };
 
-      // Long press to preview (mobile)
+      // Long press to preview (mobile) - refined with scroll check
+      let touchStartX = 0;
+      let touchStartY = 0;
       el.addEventListener('touchstart', (e) => {
         this._longPressTriggered = false;
-        this._swipeActive = false;
-        this._swipeStartY = e.touches[0].clientY;
-        this._swipeStartX = e.touches[0].clientX;
-        this._swipeCardEl = el;
-        this._swipeCard = card;
-        this._swipeOrigTransform = el.style.transform;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
 
         this._longPressTimer = setTimeout(() => {
           this._longPressTriggered = true;
@@ -422,61 +460,29 @@ const UI = {
         }, 500);
       }, { passive: true });
 
-      // B1: Swipe gesture
       el.addEventListener('touchmove', (e) => {
+        if (this._longPressTriggered) {
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
+
+        // Calculate distance moved
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // If user drags/scrolls > 10px, cancel the long press preview
+        if (dist > 10) {
+          clearTimeout(this._longPressTimer);
+        }
+      }, { passive: false });
+
+      el.addEventListener('touchend', () => {
         clearTimeout(this._longPressTimer);
-        if (this._longPressTriggered) return;
+      });
 
-        const dy = this._swipeStartY - e.touches[0].clientY;
-        const dx = Math.abs(e.touches[0].clientX - this._swipeStartX);
-
-        // Only activate vertical swipe if vertical movement > horizontal
-        if (dy > 15 && dy > dx) {
-          this._swipeActive = true;
-          el.classList.add('dragging');
-
-          // Move card up with finger
-          el.style.transform = `translateY(${-dy}px) scale(1.05)`;
-
-          // Show/update drop zone
-          const dropZone = this.els.swipeDropZone;
-          if (dropZone) {
-            dropZone.classList.add('active');
-            if (dy > 80) {
-              dropZone.classList.add('ready');
-            } else {
-              dropZone.classList.remove('ready');
-            }
-          }
-        }
-      }, { passive: true });
-
-      el.addEventListener('touchend', (e) => {
+      el.addEventListener('touchcancel', () => {
         clearTimeout(this._longPressTimer);
-
-        const dropZone = this.els.swipeDropZone;
-        if (dropZone) {
-          dropZone.classList.remove('active', 'ready');
-        }
-
-        if (!this._swipeActive) return;
-        el.classList.remove('dragging');
-
-        // Reset double-tap state after swipe to prevent false triggers
-        this._lastTapCardId = null;
-        this._lastTapTime = 0;
-
-        const dy = this._swipeStartY - (e.changedTouches[0]?.clientY || this._swipeStartY);
-
-        if (dy > 80) {
-          // Swipe threshold met → try to play
-          this.handleSwipePlay(card, el);
-        } else {
-          // Not enough → return card to position
-          el.style.transform = '';
-          // Keep _swipeActive true briefly so onclick handler blocks the click
-          setTimeout(() => { this._swipeActive = false; }, 50);
-        }
       });
 
       // Stagger animation
@@ -1756,103 +1762,6 @@ const UI = {
       div.appendChild(info);
       area.appendChild(div);
     }
-  },
-
-  // ===== B1: Swipe Play Handler =====
-  _swipeActive: false,
-  _swipeStartY: 0,
-  _swipeStartX: 0,
-  _swipeCardEl: null,
-  _swipeCard: null,
-
-  handleSwipePlay(card, el) {
-    const player = this.getMyPlayer();
-    if (!player || !Game.currentPlayer.isHuman || Game.isProcessing) {
-      el.style.transform = '';
-      // Delay reset so onclick handler can check _swipeActive
-      setTimeout(() => { this._swipeActive = false; }, 50);
-      return;
-    }
-
-    // Check if this card is playable
-    const isSinglePlayable = [
-      CardType.SKIP, CardType.ATTACK, CardType.SEE_FUTURE,
-      CardType.SHUFFLE, CardType.FAVOR
-    ].includes(card.type);
-
-    const isCat = isCatCard(card.type);
-
-    if (isSinglePlayable) {
-      // Play single card via swipe
-      this.haptic(30);
-      Game.selectedCards = [card.id];
-      Game.playSelectedCards();
-      // Keep _swipeActive true to block onclick, reset after
-      setTimeout(() => { this._swipeActive = false; }, 50);
-    } else if (isCat) {
-      // B2: Cat magnet - find matching cat
-      const match = player.hand.find(c => c.id !== card.id && c.type === card.type);
-      if (match) {
-        this.haptic(30);
-        this.animateCatMagnet(card, match, el);
-        // _swipeActive will be reset in animateCatMagnet after timeout
-      } else {
-        // No matching cat - reject
-        this.haptic([50, 30, 50]);
-        el.style.transform = '';
-        el.classList.add('swipe-invalid');
-        setTimeout(() => {
-          el.classList.remove('swipe-invalid');
-          this._swipeActive = false;
-        }, 400);
-      }
-    } else {
-      // Not playable (Defuse, Nope, EK) - reject
-      this.haptic([50, 30, 50]);
-      el.style.transform = '';
-      el.classList.add('swipe-invalid');
-      setTimeout(() => {
-        el.classList.remove('swipe-invalid');
-        this._swipeActive = false;
-      }, 400);
-    }
-  },
-
-  // ===== B2: Cat Pair Magnet Animation =====
-  animateCatMagnet(swipedCard, matchCard, swipedEl) {
-    // Find the matching card element in the DOM
-    const matchEl = document.querySelector(`.card[data-card-id="${matchCard.id}"]`);
-    if (!matchEl) {
-      Game.selectedCards = [swipedCard.id, matchCard.id];
-      Game.playSelectedCards();
-      this._swipeActive = false;
-      return;
-    }
-
-    // Get positions
-    const swipedRect = swipedEl.getBoundingClientRect();
-    const matchRect = matchEl.getBoundingClientRect();
-
-    // Make match card fly to the swiped card position
-    matchEl.classList.add('magnet-fly');
-    matchEl.style.left = matchRect.left + 'px';
-    matchEl.style.top = matchRect.top + 'px';
-    matchEl.style.width = matchRect.width + 'px';
-    matchEl.style.height = matchRect.height + 'px';
-
-    // Fly to swiped card
-    requestAnimationFrame(() => {
-      matchEl.style.left = swipedRect.left + 'px';
-      matchEl.style.top = (swipedRect.top - 60) + 'px';
-      matchEl.style.transform = 'rotate(10deg) scale(1.05)';
-    });
-
-    // After animation, play the pair
-    setTimeout(() => {
-      Game.selectedCards = [swipedCard.id, matchCard.id];
-      Game.playSelectedCards();
-      this._swipeActive = false;
-    }, 450);
   },
 
   // ===== B4: Double-Tap State =====
