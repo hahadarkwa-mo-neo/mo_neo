@@ -383,14 +383,14 @@ const UI = {
 
     sorted.forEach((card, i) => {
       const el = this.createCardElement(card, true);
-      const isSelected = Game.selectedCards.includes(card.id);
+      const isSelected = Game.selectedCards.map(String).includes(String(card.id));
       if (isSelected) {
         el.classList.add('selected');
       }
 
       // B5: Combo hint - highlight matching cat cards
       if (Game.selectedCards.length === 1 && !isSelected) {
-        const selectedCard = player.hand.find(c => c.id === Game.selectedCards[0]);
+        const selectedCard = player.hand.find(c => String(c.id) === String(Game.selectedCards[0]));
         if (selectedCard && isCatCard(selectedCard.type) && card.type === selectedCard.type) {
           el.classList.add('combo-hint');
         }
@@ -407,7 +407,7 @@ const UI = {
 
       // Drag action handlers
       const onDragStart = (clientX, clientY) => {
-        if (!Game.currentPlayer.isHuman || Game.isProcessing) return;
+        if (!Game.currentPlayer || !Game.currentPlayer.isHuman || Game.isProcessing) return;
         startX = clientX;
         startY = clientY;
         currentX = 0;
@@ -423,6 +423,14 @@ const UI = {
             this.showCardPreview(card);
           }
         }, 500);
+
+        // Smart selection integration:
+        // If the card being dragged is NOT selected, select ONLY this card!
+        const isSelected = Game.selectedCards.map(String).includes(String(card.id));
+        if (!isSelected) {
+          Game.selectedCards = [card.id];
+          UI.updateCardSelectionStates();
+        }
       };
 
       const onDragMove = (clientX, clientY, event) => {
@@ -436,11 +444,15 @@ const UI = {
         }
 
         // Lock drag state if swiped vertical upwards
-        if (!isDragging && dy < -dragThreshold && Math.abs(dy) > Math.abs(dx)) {
+        if (!isDragging && dy < -dragThreshold && Math.abs(dy) > Math.abs(dx) * 0.6) {
           isDragging = true;
-          el.style.transition = 'none';
-          el.style.zIndex = '1000';
-          // Elevate parent stacking context so dragged card floats above all layers
+          // Set transition and z-index for all selected cards
+          const selectedCards = container.querySelectorAll('.card.selected');
+          selectedCards.forEach(cardEl => {
+            cardEl.style.transition = 'none';
+            cardEl.style.zIndex = '1000';
+          });
+          // Elevate parent stacking context so dragged cards float above all layers
           document.querySelector('.hand-section')?.classList.add('dragging-active');
         }
 
@@ -451,15 +463,21 @@ const UI = {
           // Damp down pull offsets
           if (currentY > 0) currentY = currentY * 0.2; 
           
-          // Animate card following cursor/finger
-          el.style.transform = `translate(${currentX}px, ${currentY}px) scale(1.08) rotate(${currentX * 0.05}deg)`;
+          // Animate ALL selected cards following cursor/finger together
+          const selectedCards = container.querySelectorAll('.card.selected');
+          selectedCards.forEach(cardEl => {
+            cardEl.style.transform = `translate(${currentX}px, ${currentY}px) scale(1.08) rotate(${currentX * 0.05}deg)`;
+          });
 
-          // Visual drop indicator
-          if (currentY < playThreshold) {
-            el.classList.add('ready-to-drop');
+          // Proactive dragging validation: check if combo is playable
+          const canPlay = Game.canPlaySelected();
+
+          // Visual drop indicator (only if playable!)
+          if (currentY < playThreshold && canPlay) {
+            selectedCards.forEach(cardEl => cardEl.classList.add('ready-to-drop'));
             this.els.discardArea.classList.add('drop-zone-highlight');
           } else {
-            el.classList.remove('ready-to-drop');
+            selectedCards.forEach(cardEl => cardEl.classList.remove('ready-to-drop'));
             this.els.discardArea.classList.remove('drop-zone-highlight');
           }
 
@@ -472,34 +490,35 @@ const UI = {
 
         if (isDragging) {
           isDragging = false;
-          el.classList.remove('ready-to-drop');
+          
+          const selectedCards = container.querySelectorAll('.card.selected');
+          selectedCards.forEach(cardEl => cardEl.classList.remove('ready-to-drop'));
           this.els.discardArea.classList.remove('drop-zone-highlight');
 
           // Reset parent stacking context
           document.querySelector('.hand-section')?.classList.remove('dragging-active');
 
-          if (currentY < playThreshold) {
-            // Play card
-            Game.selectedCards = [card.id];
-            if (Game.canPlaySelected()) {
-              this.haptic(30);
-              Game.playSelectedCards();
-            } else {
-              // Invalid card play (cat cards, nope, defuse, etc.)
-              this.haptic([50, 30, 50]);
-              el.classList.add('shake-invalid');
-              setTimeout(() => el.classList.remove('shake-invalid'), 400);
-              
-              // Reset transform
-              el.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
-              el.style.transform = '';
-              el.style.zIndex = '';
-            }
+          const canPlay = Game.canPlaySelected();
+          if (currentY < playThreshold && canPlay) {
+            // Play selected cards
+            this.haptic(30);
+            Game.playSelectedCards();
           } else {
-            // Snap back
-            el.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
-            el.style.transform = '';
-            el.style.zIndex = '';
+            // Snap back ALL selected cards
+            selectedCards.forEach(cardEl => {
+              cardEl.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
+              cardEl.style.transform = '';
+              cardEl.style.zIndex = '';
+            });
+
+            // If they tried to play an invalid play, shake them!
+            if (currentY < playThreshold && !canPlay) {
+              this.haptic([50, 30, 50]);
+              selectedCards.forEach(cardEl => {
+                cardEl.classList.add('shake-invalid');
+                setTimeout(() => cardEl.classList.remove('shake-invalid'), 400);
+              });
+            }
           }
         } else {
           // It was a simple click/tap!
@@ -597,7 +616,7 @@ const UI = {
     const cardElements = this.els.handCards.querySelectorAll('.card');
     cardElements.forEach(el => {
       const cardId = el.dataset.cardId;
-      const isSelected = Game.selectedCards.includes(cardId);
+      const isSelected = Game.selectedCards.map(String).includes(String(cardId));
       
       // Update selected class
       if (isSelected) {
@@ -609,8 +628,8 @@ const UI = {
       // Combo hint - highlight matching cat cards
       el.classList.remove('combo-hint');
       if (Game.selectedCards.length === 1 && !isSelected) {
-        const selectedCard = player.hand.find(c => c.id === Game.selectedCards[0]);
-        const card = player.hand.find(c => c.id === cardId);
+        const selectedCard = player.hand.find(c => String(c.id) === String(Game.selectedCards[0]));
+        const card = player.hand.find(c => String(c.id) === String(cardId));
         if (selectedCard && card && isCatCard(selectedCard.type) && card.type === selectedCard.type) {
           el.classList.add('combo-hint');
         }
