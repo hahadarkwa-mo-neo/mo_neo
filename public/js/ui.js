@@ -6,6 +6,9 @@
 const UI = {
   // Cache DOM elements
   els: {},
+  isDealingIntro: false,
+  previousHandCardIds: [],
+  dealTimeout: null,
 
   initElements() {
     this.els = {
@@ -98,6 +101,10 @@ const UI = {
     this._hideAllScreens();
     this.els.gameScreen.classList.add('active');
     this.setupGameEvents();
+    
+    // Set card dealing intro flags
+    this.isDealingIntro = true;
+    this.previousHandCardIds = [];
   },
 
   showGameOver(winner) {
@@ -433,6 +440,8 @@ const UI = {
           isDragging = true;
           el.style.transition = 'none';
           el.style.zIndex = '1000';
+          // Elevate parent stacking context so dragged card floats above all layers
+          document.querySelector('.hand-section')?.classList.add('dragging-active');
         }
 
         if (isDragging) {
@@ -465,6 +474,9 @@ const UI = {
           isDragging = false;
           el.classList.remove('ready-to-drop');
           this.els.discardArea.classList.remove('drop-zone-highlight');
+
+          // Reset parent stacking context
+          document.querySelector('.hand-section')?.classList.remove('dragging-active');
 
           if (currentY < playThreshold) {
             // Play card
@@ -531,10 +543,43 @@ const UI = {
         onDragEnd();
       });
 
-      // Stagger animation
-      el.style.animationDelay = `${i * 0.05}s`;
+      // Entrance / dealing animation and sound stagger
+      if (this.isDealingIntro) {
+        el.classList.add('card-dealing-entrance');
+        el.style.animationDelay = `${i * 0.12}s`;
+        setTimeout(() => {
+          if (this.isDealingIntro) {
+            Sounds.cardDraw();
+          }
+        }, i * 120);
+      } else {
+        // Prevent existing cards from re-animating on redraws, only animate new cards
+        if (this.previousHandCardIds && this.previousHandCardIds.includes(card.id)) {
+          el.style.animation = 'none';
+        } else {
+          el.style.animationDelay = '0s';
+        }
+      }
+
       container.appendChild(el);
     });
+
+    // If in dealing intro, schedule transition back to stable state
+    if (this.isDealingIntro) {
+      const dealDuration = sorted.length * 120 + 500;
+      if (this.dealTimeout) clearTimeout(this.dealTimeout);
+      this.dealTimeout = setTimeout(() => {
+        this.isDealingIntro = false;
+        const elements = container.querySelectorAll('.card-dealing-entrance');
+        elements.forEach(cardEl => {
+          cardEl.classList.remove('card-dealing-entrance');
+          cardEl.style.animation = 'none';
+        });
+      }, dealDuration);
+    }
+
+    // Save current cards IDs to prevent re-triggering deal animation on redraws
+    this.previousHandCardIds = sorted.map(c => c.id);
 
     // Tap outside cards to deselect all
     container.onclick = (e) => {

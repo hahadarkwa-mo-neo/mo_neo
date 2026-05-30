@@ -1251,12 +1251,12 @@ class ServerGame {
         // Tự loại vì không thể đặt Mèo Nổ
         this.pendingAction = null;
       }
-      if (this.pendingAction.type === 'favor' && this.pendingAction.targetId === socketId) {
+      if (this.pendingAction && this.pendingAction.type === 'favor' && this.pendingAction.targetId === socketId) {
         // Hủy Favor
         this.addLog(`🙏 Xin Xỏ bị hủy do ${player.name} mất kết nối`);
         this.pendingAction = null;
       }
-      if (this.pendingAction.type === 'nope') {
+      if (this.pendingAction && this.pendingAction.type === 'nope') {
         // Xóa khỏi eligible
         this.pendingAction.eligiblePlayerIds = this.pendingAction.eligiblePlayerIds.filter(
           id => id !== socketId
