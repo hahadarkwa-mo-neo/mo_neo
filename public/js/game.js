@@ -560,6 +560,12 @@ const Game = {
       case CardType.SEE_FUTURE:
         this.addLog(`🔮 ${player.name} nhìn trộm 3 lá trên cùng!`);
         Sounds.seeFuture();
+        
+        // Mystic stardust particles effect
+        if (typeof UI !== 'undefined' && UI.animateSeeFutureMystic) {
+          UI.animateSeeFutureMystic();
+        }
+
         const topCards = this.deck.slice(-3).reverse();
         this.knownTopCards = [...topCards];
         this.knownTopCardsPlayer = player.index;
@@ -576,7 +582,7 @@ const Game = {
           }
         }
         break;
-
+ 
       case CardType.SHUFFLE:
         this.addLog(`🔀 ${player.name} xáo bộ bài!`);
         Sounds.shuffle();
@@ -586,17 +592,23 @@ const Game = {
         UI.animateShuffle();
         await delay(600);
         break;
-
+ 
       case CardType.FAVOR:
         if (!target) break;
         this.addLog(`🎁 ${player.name} xin bài từ ${target.name}!`);
         Sounds.favor();
-
+ 
+        // Dynamic Paper Plane Animation
+        if (typeof UI !== 'undefined' && UI.animateFavorFlight) {
+          UI.animateFavorFlight(player, target);
+          await delay(800); // Sync with paper plane flight duration
+        }
+ 
         if (target.hand.length === 0) {
           this.addLog(`❌ ${target.name} không có bài!`);
           break;
         }
-
+ 
         let givenCard;
         if (target.isHuman) {
           // Human chooses which card to give
@@ -606,9 +618,18 @@ const Game = {
           givenCard = AI.chooseCardToGive(target);
           target.removeCard(givenCard.id);
         }
-
+ 
         if (givenCard) {
           player.addCard(givenCard);
+          
+          // Dynamic returning card flight animation!
+          if (typeof UI !== 'undefined' && UI._flyCard) {
+            const fromEl = target.isHuman ? UI.els.playerInfo : document.querySelector(`.opponent[data-player-index="${target.index}"]`);
+            const toEl = player.isHuman ? UI.els.handCards : document.querySelector(`.opponent[data-player-index="${player.index}"]`);
+            UI._flyCard(true, givenCard, fromEl, toEl);
+            await delay(650); // Sync with card flight duration
+          }
+ 
           if (player.isHuman) {
             this.addLog(`✅ Bạn nhận được: ${givenCard.emoji} ${givenCard.name}!`);
           } else if (target.isHuman) {

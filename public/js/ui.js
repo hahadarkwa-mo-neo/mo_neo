@@ -413,6 +413,17 @@ const UI = {
         currentX = 0;
         currentY = 0;
         isDragging = false;
+        UI._longPressTriggered = false;
+
+        // Start 500ms long press timer
+        clearTimeout(UI._longPressTimer);
+        UI._longPressTimer = setTimeout(() => {
+          UI._longPressTriggered = true;
+          UI.haptic(40); // Haptic vibration indicator
+          UI.showCardPreview(card);
+          isDragging = false;
+          onDragEnd(); // Cancel the drag state immediately
+        }, 500);
       };
 
       const onDragMove = (clientX, clientY, event) => {
@@ -420,7 +431,18 @@ const UI = {
         const dy = clientY - startY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Lock drag state if swiped vertically (up or down) past threshold
+        // Cancel long press timer if drag exceeds threshold
+        if (dist > dragThreshold) {
+          clearTimeout(UI._longPressTimer);
+        }
+
+        // If long press occurred, block drag movement
+        if (UI._longPressTriggered) {
+          if (event && event.cancelable) event.preventDefault();
+          return;
+        }
+
+        // Lock drag state if swiped vertically past threshold
         if (!isDragging && dist > dragThreshold && Math.abs(dy) > Math.abs(dx) * 0.4) {
           isDragging = true;
 
@@ -440,6 +462,27 @@ const UI = {
           });
           // Elevate parent stacking context so dragged cards float above all layers
           document.querySelector('.hand-section')?.classList.add('dragging-active');
+
+          // DYNAMIC OVERLAY DROP ZONE CREATION & ACTIVATION
+          let tableArea = document.querySelector('.table-area');
+          let dropOverlay = document.getElementById('drop-zone-overlay');
+          if (tableArea && !dropOverlay) {
+            dropOverlay = document.createElement('div');
+            dropOverlay.id = 'drop-zone-overlay';
+            dropOverlay.className = 'drop-zone-overlay';
+            dropOverlay.innerHTML = `
+              <div class="drop-zone-icon">📥</div>
+              <div class="drop-zone-text">Thả vào đây để đánh</div>
+            `;
+            tableArea.appendChild(dropOverlay);
+          }
+          if (dropOverlay) {
+            dropOverlay.classList.add('active');
+            const canPlay = Game.canPlaySelected();
+            dropOverlay.className = `drop-zone-overlay active ${canPlay ? 'valid' : 'invalid'}`;
+            dropOverlay.querySelector('.drop-zone-text').textContent = canPlay ? 'THẢ ĐỂ ĐÁNH BÀI!' : 'KHÔNG THỂ ĐÁNH LÁ NÀY!';
+            dropOverlay.querySelector('.drop-zone-icon').textContent = canPlay ? '📥' : '⚠️';
+          }
         }
 
         if (isDragging) {
@@ -457,14 +500,23 @@ const UI = {
 
           // Proactive dragging validation: check if combo is playable
           const canPlay = Game.canPlaySelected();
+          const dropOverlay = document.getElementById('drop-zone-overlay');
 
           // Visual drop indicator (only if playable!)
           if (currentY < playThreshold && canPlay) {
             selectedCards.forEach(cardEl => cardEl.classList.add('ready-to-drop'));
             this.els.discardArea.classList.add('drop-zone-highlight');
+            if (dropOverlay) {
+              dropOverlay.classList.add('valid');
+              dropOverlay.classList.remove('invalid');
+            }
           } else {
             selectedCards.forEach(cardEl => cardEl.classList.remove('ready-to-drop'));
             this.els.discardArea.classList.remove('drop-zone-highlight');
+            if (dropOverlay) {
+              const canPlaySelected = Game.canPlaySelected();
+              dropOverlay.className = `drop-zone-overlay active ${canPlaySelected ? 'valid' : 'invalid'}`;
+            }
           }
 
           if (event && event.cancelable) event.preventDefault();
@@ -472,6 +524,19 @@ const UI = {
       };
 
       const onDragEnd = () => {
+        clearTimeout(UI._longPressTimer);
+
+        // Hide active drop zone overlay
+        let dropOverlay = document.getElementById('drop-zone-overlay');
+        if (dropOverlay) {
+          dropOverlay.classList.remove('active', 'valid', 'invalid');
+        }
+
+        if (UI._longPressTriggered) {
+          UI._longPressTriggered = false;
+          return;
+        }
+
         if (isDragging) {
           isDragging = false;
           
@@ -505,10 +570,35 @@ const UI = {
             }
           }
         } else {
-          // It was a simple click/tap!
-          this.haptic(10);
-          Sounds.click();
-          Game.selectCard(card.id);
+          // Double-tap to play selected card instantly
+          const now = Date.now();
+          const DOUBLE_TAP_DELAY = 300;
+
+          if (UI._lastTapCardId === card.id && (now - UI._lastTapTime) < DOUBLE_TAP_DELAY) {
+            // DOUBLE-TAP
+            UI._lastTapCardId = null;
+            UI._lastTapTime = 0;
+
+            if (Game.currentPlayer && Game.currentPlayer.isHuman && !Game.isProcessing) {
+              const canPlay = Game.canPlaySelected();
+              if (canPlay) {
+                this.haptic(30);
+                Game.playSelectedCards();
+              } else {
+                this.haptic([50, 30, 50]);
+                el.classList.add('shake-invalid');
+                setTimeout(() => el.classList.remove('shake-invalid'), 400);
+              }
+            }
+          } else {
+            // SINGLE-TAP
+            UI._lastTapCardId = card.id;
+            UI._lastTapTime = now;
+
+            this.haptic(10);
+            Sounds.click();
+            Game.selectCard(card.id);
+          }
         }
       };
 
@@ -910,7 +1000,7 @@ const UI = {
 
     // Create floating element
     const floater = document.createElement('div');
-    floater.className = `floating-card ${faceUp ? 'face-up' : 'face-down'}`;
+    floater.className = 'floating-card';
     
     // Center calculations (card sizes approx width: 85px, height: 120px)
     const startX = fromRect.left + fromRect.width / 2 - 42;
@@ -918,24 +1008,25 @@ const UI = {
     
     floater.style.left = `${startX}px`;
     floater.style.top = `${startY}px`;
-    floater.style.transform = `scale(0.5) rotate(${Math.random() * 10 - 5}deg)`;
-    floater.style.opacity = '0';
     
-    if (faceUp && card) {
-      const gradient = card.gradient || ['#ff2e63', '#ff6b35'];
-      floater.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
-      floater.innerHTML = `
-        <div class="floating-card-emoji">${card.emoji}</div>
-        <div class="floating-card-name">${card.name}</div>
-      `;
-    } else {
-      floater.innerHTML = `
-        <div class="card-back-pattern">
-          <span>🐱</span>
-          <span>💣</span>
+    // Detect if we should Y-flip (drawing for human player)
+    const shouldFlip = (toEl === this.els.handCards);
+    
+    // Construct 3D rotating inner card
+    floater.innerHTML = `
+      <div class="floating-card-inner" style="transform: rotateY(${shouldFlip ? 0 : (faceUp ? 180 : 0)}deg) scale(0.5);">
+        <div class="floating-card-front" style="background: linear-gradient(135deg, ${card?.gradient ? card.gradient[0] : '#ff2e63'}, ${card?.gradient ? card.gradient[1] : '#ff6b35'})">
+          <div class="floating-card-emoji">${card ? card.emoji : '🃏'}</div>
+          <div class="floating-card-name">${card ? card.name : 'Mèo Nổ'}</div>
         </div>
-      `;
-    }
+        <div class="floating-card-back">
+          <div class="card-back-pattern">
+            <span>🐱</span>
+            <span>💣</span>
+          </div>
+        </div>
+      </div>
+    `;
 
     document.body.appendChild(floater);
 
@@ -943,7 +1034,11 @@ const UI = {
     floater.offsetHeight;
 
     // Trigger flight
-    floater.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.4, 1)';
+    floater.style.transition = 'all 0.65s cubic-bezier(0.25, 1, 0.4, 1)';
+    const inner = floater.querySelector('.floating-card-inner');
+    if (inner) {
+      inner.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.4, 1)';
+    }
     
     requestAnimationFrame(() => {
       const destX = toRect.left + toRect.width / 2 - 42;
@@ -951,21 +1046,35 @@ const UI = {
       
       floater.style.left = `${destX}px`;
       floater.style.top = `${destY}px`;
-      floater.style.transform = `scale(1) rotate(${Math.random() * 20 - 10}deg)`;
       floater.style.opacity = '1';
+      
+      if (inner) {
+        // If drawing: Y-flip to face-up (180deg). If playing: Y-spin from 180deg to 540deg.
+        const rotY = shouldFlip ? 180 : (faceUp ? 540 : 0);
+        inner.style.transform = `rotateY(${rotY}deg) scale(1) rotate(${Math.random() * 20 - 10}deg)`;
+      }
     });
 
     // Clean up
     setTimeout(() => {
       floater.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
       floater.style.opacity = '0';
-      floater.style.transform = `scale(0.85) rotate(${Math.random() * 30 - 15}deg)`;
+      if (inner) {
+        inner.style.transition = 'transform 0.25s ease';
+        inner.style.transform = `scale(0.85) rotate(${Math.random() * 30 - 15}deg)`;
+      }
       
       setTimeout(() => {
         floater.remove();
+        
+        // Discard Pile Impact effect when card lands
+        if (toEl === this.els.discardArea) {
+          this.playDiscardImpact(card);
+        }
+        
         if (callback) callback();
       }, 250);
-    }, 600);
+    }, 650);
   },
 
   animateCardPlay(card, player) {
@@ -980,6 +1089,20 @@ const UI = {
     
     const toEl = this.els.discardArea;
     this._flyCard(true, card, fromEl, toEl);
+
+    // Trigger Nope screen effect!
+    if (card.type === CardType.NOPE) {
+      setTimeout(() => {
+        this.triggerNopeGlitchEffect(player.name);
+      }, 350); // Sync with flight mid-way
+    }
+
+    // Trigger Defuse screen effect!
+    if (card.type === CardType.DEFUSE) {
+      setTimeout(() => {
+        this.triggerDefuseSavedEffect(player.name);
+      }, 350);
+    }
   },
 
   animateCardDraw(card, player) {
@@ -1019,8 +1142,53 @@ const UI = {
 
   animateShuffle() {
     const deck = this.els.deckArea;
-    deck.classList.add('shuffling');
-    setTimeout(() => deck.classList.remove('shuffling'), 600);
+    if (!deck) return;
+
+    deck.classList.add('shuffling-base');
+    setTimeout(() => deck.classList.remove('shuffling-base'), 1200);
+
+    const rect = deck.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2 - 42;
+    const startY = rect.top + rect.height / 2 - 60;
+
+    const cards = [];
+    const count = 3;
+
+    // Create 3 temporary shuffling card elements fanning out in 3D
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'shuffling-card-fan';
+      el.innerHTML = `
+        <div class="card-back-pattern">
+          <span>🐱</span>
+          <span>💣</span>
+        </div>
+      `;
+      el.style.left = `${startX}px`;
+      el.style.top = `${startY}px`;
+      el.style.zIndex = 1000 + i;
+      
+      let dir = 'center';
+      if (i === 0) dir = 'left';
+      if (i === 2) dir = 'right';
+      
+      el.classList.add(`fan-${dir}`);
+      document.body.appendChild(el);
+      cards.push(el);
+    }
+
+    // Play tactile vibration and sounds
+    this.haptic([30, 20, 30, 20, 30, 20, 50]);
+
+    // Clean up cards after shuffling
+    setTimeout(() => {
+      cards.forEach(el => {
+        el.style.transition = 'all 0.3s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.5)';
+        setTimeout(() => el.remove(), 300);
+      });
+    }, 1100);
   },
 
   // ===== Explosion Effect =====
@@ -2135,6 +2303,175 @@ const UI = {
       try {
         navigator.vibrate(pattern);
       } catch (e) { /* ignore */ }
+    }
+  },
+
+  // ===== Custom Animation Visual Effects =====
+
+  triggerNopeGlitchEffect(playerName) {
+    // Create glitched shield overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'nope-glitch-overlay';
+    overlay.innerHTML = `
+      <div class="nope-glitch-content">
+        <div class="nope-glitch-shield">🚫</div>
+        <div class="nope-glitch-title">NOPE!</div>
+        <div class="nope-glitch-subtitle">${playerName} đã Phản Đối!</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Shake the whole app screen container
+    const app = this.els.app || document.getElementById('app');
+    if (app) {
+      app.classList.add('screen-shake-intense');
+      setTimeout(() => app.classList.remove('screen-shake-intense'), 600);
+    }
+
+    // Heavy glitch vibration pattern
+    this.haptic([80, 50, 80, 50, 150]);
+
+    // Fade out and remove
+    setTimeout(() => {
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.remove(), 400);
+    }, 1200);
+  },
+
+  triggerDefuseSavedEffect(playerName) {
+    const overlay = document.createElement('div');
+    overlay.className = 'defuse-saved-overlay';
+    overlay.innerHTML = `
+      <div class="defuse-saved-content">
+        <div class="defuse-saved-shield">🔧</div>
+        <div class="defuse-saved-title">SAVED!</div>
+        <div class="defuse-saved-subtitle">${playerName} đã Tháo Ngòi thành công!</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Dynamic positive vibration
+    this.haptic([100, 30, 200]);
+
+    // Fade out and remove
+    setTimeout(() => {
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.remove(), 400);
+    }, 1500);
+  },
+
+  animateFavorFlight(fromPlayer, toPlayer, callback) {
+    const fromEl = fromPlayer.isHuman ? this.els.playerInfo : document.querySelector(`.opponent[data-player-index="${fromPlayer.index}"]`);
+    const toEl = toPlayer.isHuman ? this.els.playerInfo : document.querySelector(`.opponent[data-player-index="${toPlayer.index}"]`);
+    
+    if (!fromEl || !toEl) {
+      if (callback) callback();
+      return;
+    }
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+
+    const startX = fromRect.left + fromRect.width / 2;
+    const startY = fromRect.top + fromRect.height / 2;
+    const destX = toRect.left + toRect.width / 2;
+    const destY = toRect.top + toRect.height / 2;
+
+    const plane = document.createElement('div');
+    plane.className = 'floating-favor-plane';
+    plane.textContent = '✈️';
+    plane.style.left = `${startX}px`;
+    plane.style.top = `${startY}px`;
+    document.body.appendChild(plane);
+
+    plane.offsetHeight; // Force reflow
+    plane.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.4, 1)';
+    
+    requestAnimationFrame(() => {
+      plane.style.left = `${destX}px`;
+      plane.style.top = `${destY}px`;
+      plane.style.transform = `scale(1.5) rotate(${Math.atan2(destY - startY, destX - startX) * 180 / Math.PI}deg)`;
+      plane.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+      this.haptic(25);
+      plane.style.transition = 'opacity 0.2s ease';
+      plane.style.opacity = '0';
+      setTimeout(() => {
+        plane.remove();
+        if (callback) callback();
+      }, 200);
+    }, 800);
+  },
+
+  animateSeeFutureMystic() {
+    const deck = this.els.deckArea;
+    if (!deck) return;
+
+    const rect = deck.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Spawn magical purple/blue sparkles
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'mystic-spark';
+      p.style.backgroundColor = i % 2 === 0 ? '#7c3aed' : '#00d4ff';
+      p.style.left = `${centerX}px`;
+      p.style.top = `${centerY}px`;
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 30 + Math.random() * 45;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+
+      p.style.setProperty('--tx', `${tx}px`);
+      p.style.setProperty('--ty', `${ty}px`);
+      p.style.animation = 'mysticSpark 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards';
+      p.style.animationDelay = `${Math.random() * 0.35}s`;
+
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1500);
+    }
+  },
+
+  playDiscardImpact(card) {
+    const discardPile = this.els.discardArea;
+    if (!discardPile) return;
+
+    // Trigger squash and stretch animation
+    discardPile.classList.add('discard-impact-bounce');
+    setTimeout(() => discardPile.classList.remove('discard-impact-bounce'), 450);
+
+    // Gently vibrate screen
+    this.haptic(15);
+
+    // Setup spark colors based on card's design gradient
+    const colors = card?.gradient || ['#00d4ff', '#7c3aed'];
+    const rect = discardPile.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Spawn 15 colorful sparks fanning outward
+    for (let i = 0; i < 15; i++) {
+      const p = document.createElement('div');
+      p.className = 'play-spark';
+      p.style.color = colors[Math.floor(Math.random() * colors.length)];
+      p.style.left = `${centerX}px`;
+      p.style.top = `${centerY}px`;
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 40 + Math.random() * 70;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+
+      p.style.setProperty('--tx', `${tx}px`);
+      p.style.setProperty('--ty', `${ty}px`);
+      p.style.animation = 'sparkOut 0.60s cubic-bezier(0.1, 0.8, 0.3, 1) forwards';
+
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 600);
     }
   },
 
