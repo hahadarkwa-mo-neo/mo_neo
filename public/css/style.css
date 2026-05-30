@@ -2854,24 +2854,24 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* Opponents on the left & right sides in landscape */
-  .opponent.pos-1, .opponent.pos-top-left { top: 36px !important; left: 8px !important; }
-  .opponent.pos-2, .opponent.pos-top-right { top: 36px !important; right: 8px !important; }
-  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 76px !important; right: 8px !important; }
-  #player-info { bottom: 76px !important; left: 8px !important; }
+  .opponent.pos-1, .opponent.pos-top-left { top: 6vmin !important; left: 2vmin !important; }
+  .opponent.pos-2, .opponent.pos-top-right { top: 6vmin !important; right: 2vmin !important; }
+  .opponent.pos-3, .opponent.pos-bottom-right { bottom: 12.5vmin !important; right: 2vmin !important; }
+  #player-info { bottom: 12.5vmin !important; left: 2vmin !important; }
 
   /* Top center turn warning */
-  .opponent.pos-top-center, .opponent.pos-top-middle { top: 36px !important; }
+  .opponent.pos-top-center, .opponent.pos-top-middle { top: 6vmin !important; }
 
   /* Small height tweaks for SE-like landscape */
   @media (max-height: 380px) {
     .game-area {
       top: 41% !important;
     }
-    .opponent.pos-1, .opponent.pos-top-left { top: 24px !important; }
-    .opponent.pos-2, .opponent.pos-top-right { top: 24px !important; }
-    .opponent.pos-3, .opponent.pos-bottom-right { bottom: 64px !important; }
-    #player-info { bottom: 64px !important; }
-    .fullscreen-btn { right: 36px !important; }
+    .opponent.pos-1, .opponent.pos-top-left { top: 4.5vmin !important; }
+    .opponent.pos-2, .opponent.pos-top-right { top: 4.5vmin !important; }
+    .opponent.pos-3, .opponent.pos-bottom-right { bottom: 11vmin !important; }
+    #player-info { bottom: 11vmin !important; }
+    .fullscreen-btn { right: 9vmin !important; }
   }
 }
 
@@ -2959,24 +2959,24 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* Opponents top row positioning */
-  .opponent.pos-1, .opponent.pos-top-left { top: 34px !important; left: 8px !important; }
-  .opponent.pos-2, .opponent.pos-top-right { top: 34px !important; right: 8px !important; }
-  .opponent.pos-top-center, .opponent.pos-top-middle { top: 34px !important; }
+  .opponent.pos-1, .opponent.pos-top-left { top: 6vmin !important; left: 2vmin !important; }
+  .opponent.pos-2, .opponent.pos-top-right { top: 6vmin !important; right: 2vmin !important; }
+  .opponent.pos-top-center, .opponent.pos-top-middle { top: 6vmin !important; }
   
   /* Stacking the bottom right opponent and player box above hand */
   .opponent.pos-3, .opponent.pos-bottom-right {
-    top: 84px !important;
-    right: 8px !important;
+    top: 17.5vmin !important;
+    right: 2vmin !important;
     bottom: auto !important;
   }
   #player-info {
     bottom: auto !important;
-    top: 84px !important;
-    left: 8px !important;
+    top: 17.5vmin !important;
+    left: 2vmin !important;
   }
 
-  .sound-toggle { right: 8px !important; }
-  .fullscreen-btn { right: 42px !important; }
+  .sound-toggle { right: 2vmin !important; }
+  .fullscreen-btn { right: 10vmin !important; }
 }
 
 /* Desktop turn glow enhancement */
