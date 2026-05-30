@@ -436,7 +436,7 @@ const UI = {
           const selectedCards = container.querySelectorAll('.card.selected');
           selectedCards.forEach(cardEl => {
             cardEl.style.transition = 'none';
-            cardEl.style.zIndex = '1000';
+            cardEl.style.setProperty('z-index', '1000', 'important');
           });
           // Elevate parent stacking context so dragged cards float above all layers
           document.querySelector('.hand-section')?.classList.add('dragging-active');
@@ -452,7 +452,7 @@ const UI = {
           // Animate ALL selected cards following cursor/finger together
           const selectedCards = container.querySelectorAll('.card.selected');
           selectedCards.forEach(cardEl => {
-            cardEl.style.transform = `translate(${currentX}px, ${currentY}px) scale(1.08) rotate(${currentX * 0.05}deg)`;
+            cardEl.style.setProperty('transform', `translate(${currentX}px, ${currentY}px) scale(1.08) rotate(${currentX * 0.05}deg)`, 'important');
           });
 
           // Proactive dragging validation: check if combo is playable
@@ -491,8 +491,8 @@ const UI = {
             // Snap back ALL selected cards
             selectedCards.forEach(cardEl => {
               cardEl.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
-              cardEl.style.transform = '';
-              cardEl.style.zIndex = '';
+              cardEl.style.removeProperty('transform');
+              cardEl.style.removeProperty('z-index');
             });
 
             // If they tried to play an invalid play, shake them!
