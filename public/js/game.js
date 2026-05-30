@@ -223,43 +223,19 @@ const Game = {
     // In offline mode, human is always index 0; in online, check isHuman
     if (!this.currentPlayer || !this.currentPlayer.isHuman) return;
 
-    const cardIdx = this.selectedCards.indexOf(cardId);
+    const cardIdStr = String(cardId);
+    const cardIdx = this.selectedCards.findIndex(id => String(id) === cardIdStr);
+
     if (cardIdx >= 0) {
       // Deselect card
       this.selectedCards.splice(cardIdx, 1);
     } else {
-      const card = this.currentPlayer.hand.find(c => c.id === cardId);
+      const card = this.currentPlayer.hand.find(c => String(c.id) === cardIdStr);
       if (!card) return;
 
-      // Check if it's a single playable card
-      const isSinglePlayable = [
-        CardType.SKIP,
-        CardType.ATTACK,
-        CardType.SEE_FUTURE,
-        CardType.SHUFFLE,
-        CardType.FAVOR
-      ].includes(card.type);
-
-      if (isSinglePlayable) {
-        // Select single card (no auto-play, wait for confirm)
-        this.selectedCards = [cardId];
-      } else if (isCatCard(card.type)) {
-        // Check if we already have one cat card of the SAME type selected
-        const sameTypeSelected = this.selectedCards.filter(id => {
-          const c = this.currentPlayer.hand.find(cc => cc.id === id);
-          return c && c.type === card.type;
-        });
-
-        if (sameTypeSelected.length === 1) {
-          // We now have a pair! Select both (no auto-play, wait for confirm)
-          this.selectedCards = [sameTypeSelected[0], cardId];
-        } else {
-          // Just select this cat card
-          this.selectedCards = [cardId];
-        }
-      } else {
-        // For other cards (DEFUSE, NOPE, etc.), just select it normally
-        this.selectedCards = [cardId];
+      // Toggle selection limit to 5 cards
+      if (this.selectedCards.length < 5) {
+        this.selectedCards.push(card.id);
       }
     }
 

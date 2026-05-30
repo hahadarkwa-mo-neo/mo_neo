@@ -313,7 +313,7 @@ const UI = {
 
       const cards = document.createElement('div');
       cards.className = 'opponent-cards';
-      cards.textContent = player.isAlive ? `🃏 ${player.cardCount}` : 'Bị loại';
+      cards.textContent = player.isAlive ? `🃏 ${player.cardCountDisplay}` : 'Bị loại';
 
       info.appendChild(name);
       info.appendChild(cards);
@@ -321,20 +321,20 @@ const UI = {
       div.appendChild(info);
 
       // Show card backs
-      if (player.isAlive && player.cardCount > 0) {
+      if (player.isAlive && player.cardCountDisplay > 0) {
         const cardBacks = document.createElement('div');
         cardBacks.className = 'opponent-card-backs';
-        const displayCount = Math.min(player.cardCount, 8);
+        const displayCount = Math.min(player.cardCountDisplay, 8);
         for (let i = 0; i < displayCount; i++) {
           const cardBack = document.createElement('div');
           cardBack.className = 'mini-card-back';
           cardBack.style.transform = `translateX(${i * 5}px)`;
           cardBacks.appendChild(cardBack);
         }
-        if (player.cardCount > 8) {
+        if (player.cardCountDisplay > 8) {
           const more = document.createElement('span');
           more.className = 'more-cards';
-          more.textContent = `+${player.cardCount - 8}`;
+          more.textContent = `+${player.cardCountDisplay - 8}`;
           cardBacks.appendChild(more);
         }
         div.appendChild(cardBacks);
@@ -413,24 +413,6 @@ const UI = {
         currentX = 0;
         currentY = 0;
         isDragging = false;
-        
-        // Start long press timer
-        this._longPressTriggered = false;
-        this._longPressTimer = setTimeout(() => {
-          if (!isDragging) {
-            this._longPressTriggered = true;
-            this.haptic(15);
-            this.showCardPreview(card);
-          }
-        }, 500);
-
-        // Smart selection integration:
-        // If the card being dragged is NOT selected, select ONLY this card!
-        const isSelected = Game.selectedCards.map(String).includes(String(card.id));
-        if (!isSelected) {
-          Game.selectedCards = [card.id];
-          UI.updateCardSelectionStates();
-        }
       };
 
       const onDragMove = (clientX, clientY, event) => {
@@ -438,14 +420,18 @@ const UI = {
         const dy = clientY - startY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Cancel long press preview if dragged past threshold
-        if (dist > dragThreshold) {
-          clearTimeout(this._longPressTimer);
-        }
-
-        // Lock drag state if swiped vertical upwards
-        if (!isDragging && dy < -dragThreshold && Math.abs(dy) > Math.abs(dx) * 0.6) {
+        // Lock drag state if swiped vertically (up or down) past threshold
+        if (!isDragging && dist > dragThreshold && Math.abs(dy) > Math.abs(dx) * 0.4) {
           isDragging = true;
+
+          // Smart selection integration:
+          // If the card being dragged is NOT selected, select ONLY this card!
+          const isSelected = Game.selectedCards.map(String).includes(String(card.id));
+          if (!isSelected) {
+            Game.selectedCards = [card.id];
+            UI.updateCardSelectionStates();
+          }
+
           // Set transition and z-index for all selected cards
           const selectedCards = container.querySelectorAll('.card.selected');
           selectedCards.forEach(cardEl => {
@@ -486,8 +472,6 @@ const UI = {
       };
 
       const onDragEnd = () => {
-        clearTimeout(this._longPressTimer);
-
         if (isDragging) {
           isDragging = false;
           
@@ -522,11 +506,9 @@ const UI = {
           }
         } else {
           // It was a simple click/tap!
-          if (!this._longPressTriggered) {
-            this.haptic(10);
-            Sounds.click();
-            Game.selectCard(card.id);
-          }
+          this.haptic(10);
+          Sounds.click();
+          Game.selectCard(card.id);
         }
       };
 
@@ -756,7 +738,7 @@ const UI = {
       <div class="opponent-avatar" style="border-color: ${player.color}">${player.isAlive ? player.avatar : '💀'}</div>
       <div class="opponent-info">
         <div class="opponent-name" style="color: ${player.color}">${player.name}</div>
-        <div class="opponent-cards">🃏 ${player.cardCount} lá</div>
+        <div class="opponent-cards">🃏 ${player.cardCountDisplay} lá</div>
       </div>
     `;
   },
@@ -802,8 +784,10 @@ const UI = {
     // Update play button text based on selection
     if (Game.selectedCards.length === 2) {
       this.els.playBtn.textContent = '🐱 ĐÁNH CẶP';
+    } else if (Game.selectedCards.length === 5) {
+      this.els.playBtn.textContent = '✨ ĐÁNH COMBO 5 LÁ';
     } else if (Game.selectedCards.length === 1) {
-      const card = this.getMyPlayer()?.hand.find(c => c.id === Game.selectedCards[0]);
+      const card = this.getMyPlayer()?.hand.find(c => String(c.id) === String(Game.selectedCards[0]));
       if (card) {
         this.els.playBtn.textContent = `${card.emoji} ĐÁNH ${card.name}`;
       } else {
@@ -1225,7 +1209,7 @@ const UI = {
       btn.innerHTML = `
         <span class="target-avatar">${player.avatar}</span>
         <span class="target-name">${player.name}</span>
-        <span class="target-cards">🃏 ${player.cardCount}</span>
+        <span class="target-cards">🃏 ${player.cardCountDisplay}</span>
       `;
       btn.onclick = () => {
         this.closeModal();
@@ -2089,7 +2073,7 @@ const UI = {
 
       const cards = document.createElement('div');
       cards.className = 'opponent-cards';
-      cards.textContent = player.isAlive ? `🃏 ${player.cardCount}` : 'Bị loại';
+      cards.textContent = player.isAlive ? `🃏 ${player.cardCountDisplay}` : 'Bị loại';
 
       info.appendChild(name);
       info.appendChild(cards);

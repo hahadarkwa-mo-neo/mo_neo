@@ -975,6 +975,12 @@ input[type="range"]::-moz-range-thumb {
   z-index: 9999 !important;
 }
 
+.hand-section.dragging-active #hand-cards {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
 /* Hand Cards */
 #hand-area {
   position: relative;
@@ -1192,9 +1198,9 @@ input[type="range"]::-moz-range-thumb {
 
 /* Selected state - identical on desktop and mobile */
 .card.selected {
-  transform: translateY(-20px) scale(1.05) !important;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(0, 255, 136, 0.35) !important;
-  border-color: var(--neon-green) !important;
+  transform: translateY(-24px) scale(1.06) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 255, 136, 0.6), inset 0 0 12px rgba(0, 255, 136, 0.4) !important;
+  border: 3.5px solid var(--neon-green) !important;
   z-index: 150 !important;
 }
 
@@ -2875,8 +2881,9 @@ input[type="range"]::-moz-range-thumb {
 
   /* ---- Proportional Card Selection Polish ---- */
   .card.selected {
-    transform: translateY(-3.5vmin) scale(1.05) !important;
-    box-shadow: 0 1.2vmin 3vmin rgba(0, 0, 0, 0.5), 0 0 2vmin rgba(0, 255, 136, 0.4) !important;
+    transform: translateY(-4vmin) scale(1.08) !important;
+    box-shadow: 0 1.5vmin 4vmin rgba(0, 0, 0, 0.6), 0 0 2.5vmin rgba(0, 255, 136, 0.5), inset 0 0 1.5vmin rgba(0, 255, 136, 0.4) !important;
+    border: 0.4vmin solid var(--neon-green) !important;
     z-index: 150 !important;
   }
   .card.selected::after {

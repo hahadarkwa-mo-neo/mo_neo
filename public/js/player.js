@@ -58,6 +58,10 @@ class Player {
   get cardCount() {
     return this.hand.length;
   }
+
+  get cardCountDisplay() {
+    return this.cardCount;
+  }
 }
 
 // ============ AI Decision Engine ============
