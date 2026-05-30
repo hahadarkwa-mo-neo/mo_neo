@@ -115,6 +115,11 @@ const Network = {
     this.socket.emit('defuse_place', { position });
   },
 
+  discardPickerPick(cardId) {
+    if (!this.socket) return;
+    this.socket.emit('discard_picker_pick', { cardId });
+  },
+
   // ===== Room Event Listeners =====
 
   _setupRoomEvents() {
@@ -241,6 +246,10 @@ const Network = {
         fromPlayerName: data.requesterName,
         myHand: myHand
       });
+    });
+
+    s.on('discard_picker_prompt', (data) => {
+      UI.showOnlineDiscardPicker(data.discardPile);
     });
 
     s.on('defuse_prompt', (data) => {

@@ -1110,6 +1110,194 @@ const UI = {
     this.showModal(container);
   },
 
+  // ===== Discard Pile Picker (Combo 5 lá) =====
+
+  showDiscardPicker(discardPile, callback) {
+    const container = document.createElement('div');
+    container.className = 'modal-inner discard-picker-modal';
+    container.style.maxWidth = '500px';
+    container.style.width = '90%';
+
+    const title = document.createElement('h3');
+    title.className = 'modal-title';
+    title.textContent = '🎁 Chọn 1 lá từ xấp bài bỏ';
+    container.appendChild(title);
+
+    const subtitle = document.createElement('p');
+    subtitle.className = 'modal-subtitle';
+    subtitle.textContent = 'Combo 5 lá thành công! Hãy chọn 1 lá bài bạn muốn lấy:';
+    container.appendChild(subtitle);
+
+    const list = document.createElement('div');
+    list.className = 'discard-picker-list';
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(75px, 1fr))';
+    list.style.gap = '8px';
+    list.style.maxHeight = '250px';
+    list.style.overflowY = 'auto';
+    list.style.padding = '8px';
+    list.style.margin = '12px 0';
+    list.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    list.style.borderRadius = '8px';
+    list.style.background = 'rgba(0, 0, 0, 0.2)';
+
+    if (discardPile.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.style.gridColumn = '1 / -1';
+      emptyMsg.style.textAlign = 'center';
+      emptyMsg.style.padding = '20px';
+      emptyMsg.style.color = 'var(--text-muted)';
+      emptyMsg.textContent = 'Không có lá bài nào trong xấp bài bỏ!';
+      list.appendChild(emptyMsg);
+    } else {
+      discardPile.forEach(card => {
+        const cardBtn = document.createElement('button');
+        cardBtn.className = 'card-picker-item';
+        cardBtn.style.display = 'flex';
+        cardBtn.style.flexDirection = 'column';
+        cardBtn.style.alignItems = 'center';
+        cardBtn.style.justifyContent = 'center';
+        cardBtn.style.aspectRatio = '2/3';
+        cardBtn.style.borderRadius = '8px';
+        cardBtn.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+        const [c1, c2] = card.gradient || ['#3a3a3a', '#1a1a1a'];
+        cardBtn.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+        cardBtn.style.cursor = 'pointer';
+        cardBtn.style.padding = '8px';
+        cardBtn.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+
+        cardBtn.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 4px;">${card.emoji}</div>
+          <div style="font-size: 8px; font-weight: 800; color: white; text-align: center; word-break: break-word; line-height: 1.1;">${card.name}</div>
+        `;
+
+        cardBtn.onmouseenter = () => {
+          cardBtn.style.transform = 'scale(1.08)';
+          cardBtn.style.boxShadow = '0 0 12px rgba(255, 255, 255, 0.2)';
+        };
+        cardBtn.onmouseleave = () => {
+          cardBtn.style.transform = '';
+          cardBtn.style.boxShadow = '';
+        };
+
+        cardBtn.onclick = () => {
+          this.closeModal();
+          callback(card);
+        };
+        list.appendChild(cardBtn);
+      });
+    }
+
+    container.appendChild(list);
+
+    if (discardPile.length === 0) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'modal-btn cancel-btn';
+      closeBtn.textContent = 'Đóng';
+      closeBtn.onclick = () => {
+        this.closeModal();
+        Game.isProcessing = false;
+        Game.selectedCards = [];
+        UI.renderAll();
+      };
+      container.appendChild(closeBtn);
+    }
+
+    this.showModal(container);
+  },
+
+  showOnlineDiscardPicker(discardPile) {
+    const container = document.createElement('div');
+    container.className = 'modal-inner discard-picker-modal';
+    container.style.maxWidth = '500px';
+    container.style.width = '90%';
+
+    const title = document.createElement('h3');
+    title.className = 'modal-title';
+    title.textContent = '🎁 Chọn 1 lá từ xấp bài bỏ';
+    container.appendChild(title);
+
+    const subtitle = document.createElement('p');
+    subtitle.className = 'modal-subtitle';
+    subtitle.textContent = 'Combo 5 lá thành công! Hãy chọn 1 lá bài bạn muốn lấy:';
+    container.appendChild(subtitle);
+
+    const list = document.createElement('div');
+    list.className = 'discard-picker-list';
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(75px, 1fr))';
+    list.style.gap = '8px';
+    list.style.maxHeight = '250px';
+    list.style.overflowY = 'auto';
+    list.style.padding = '8px';
+    list.style.margin = '12px 0';
+    list.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    list.style.borderRadius = '8px';
+    list.style.background = 'rgba(0, 0, 0, 0.2)';
+
+    if (discardPile.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.style.gridColumn = '1 / -1';
+      emptyMsg.style.textAlign = 'center';
+      emptyMsg.style.padding = '20px';
+      emptyMsg.style.color = 'var(--text-muted)';
+      emptyMsg.textContent = 'Không có lá bài nào trong xấp bài bỏ!';
+      list.appendChild(emptyMsg);
+    } else {
+      discardPile.forEach(card => {
+        const info = CARD_INFO[card.type] || { name: card.type, emoji: '🃏', gradient: ['#3a3a3a', '#1a1a1a'] };
+        const cardBtn = document.createElement('button');
+        cardBtn.className = 'card-picker-item';
+        cardBtn.style.display = 'flex';
+        cardBtn.style.flexDirection = 'column';
+        cardBtn.style.alignItems = 'center';
+        cardBtn.style.justifyContent = 'center';
+        cardBtn.style.aspectRatio = '2/3';
+        cardBtn.style.borderRadius = '8px';
+        cardBtn.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+        const [c1, c2] = info.gradient || ['#3a3a3a', '#1a1a1a'];
+        cardBtn.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+        cardBtn.style.cursor = 'pointer';
+        cardBtn.style.padding = '8px';
+        cardBtn.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+
+        cardBtn.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 4px;">${info.emoji}</div>
+          <div style="font-size: 8px; font-weight: 800; color: white; text-align: center; word-break: break-word; line-height: 1.1;">${info.name}</div>
+        `;
+
+        cardBtn.onmouseenter = () => {
+          cardBtn.style.transform = 'scale(1.08)';
+          cardBtn.style.boxShadow = '0 0 12px rgba(255, 255, 255, 0.2)';
+        };
+        cardBtn.onmouseleave = () => {
+          cardBtn.style.transform = '';
+          cardBtn.style.boxShadow = '';
+        };
+
+        cardBtn.onclick = () => {
+          this.closeModal();
+          Network.discardPickerPick(card.id);
+        };
+        list.appendChild(cardBtn);
+      });
+    }
+
+    container.appendChild(list);
+
+    if (discardPile.length === 0) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'modal-btn cancel-btn';
+      closeBtn.textContent = 'Đóng';
+      closeBtn.onclick = () => {
+        this.closeModal();
+      };
+      container.appendChild(closeBtn);
+    }
+
+    this.showModal(container);
+  },
+
   // ===== Defuse Placement =====
 
   showDefusePlacement(deckSize) {

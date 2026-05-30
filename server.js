@@ -95,6 +95,14 @@ io.on('connection', (socket) => {
     ]);
   });
 
+  // Chọn bài từ xấp bài bỏ (Combo 5 lá)
+  socket.on('discard_picker_pick', (data) => {
+    roomManager.forwardToGame(socket, 'handleDiscardPickerPick', [
+      socket.id,
+      data.cardId
+    ]);
+  });
+
   // --- Ngắt kết nối ---
   socket.on('disconnect', () => {
     console.log(`[NGẮT KẾT NỐI] Người chơi rời: ${socket.id}`);

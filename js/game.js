@@ -295,6 +295,12 @@ const Game = {
       }
     }
 
+    // 5 different cards combo
+    if (cards.length === 5) {
+      const types = new Set(cards.map(c => c.type));
+      return types.size === 5;
+    }
+
     return false;
   },
 
@@ -357,6 +363,9 @@ const Game = {
       } else {
         await this.executeCard(player, card);
       }
+    } else if (cards.length === 5) {
+      // 5 different cards combo!
+      await this.executeFiveCardCombo(player, cards);
     }
   },
 
@@ -443,6 +452,103 @@ const Game = {
     this.isProcessing = false;
     UI.renderAll();
     if (player.isHuman) UI.enablePlayerActions();
+  },
+
+  async executeFiveCardCombo(player, cards) {
+    // Remove all 5 cards from hand
+    for (const card of cards) {
+      player.removeCard(card.id);
+      this.discardPile.push(card);
+    }
+    this.selectedCards = [];
+
+    this.addLog(`✨ ${player.name} đánh Combo 5 lá khác biệt!`);
+    Sounds.cardPlay();
+    UI.animateCardPlay(cards[0], player);
+    await delay(400);
+
+    // Check for Nope
+    const fakeCard = {
+      id: 'fake_combo_5',
+      type: 'five_card_combo',
+      name: 'Combo 5 Lá Khác Biệt',
+      emoji: '✨',
+      color: '#ff2e63',
+      gradient: ['#ec4899', '#8b5cf6']
+    };
+
+    const noped = await this.checkForNope(fakeCard, player);
+    if (noped) {
+      this.addLog(`🚫 Combo 5 Lá của ${player.name} bị Phản Đối!`);
+      this.isProcessing = false;
+      UI.renderAll();
+      if (player.isHuman) UI.enablePlayerActions();
+      return;
+    }
+
+    // Let the player pick a card from the discard pile
+    if (player.isHuman) {
+      // Show Discard Pile Picker modal
+      UI.showDiscardPicker(this.discardPile, (selectedCard) => {
+        // Remove card from discardPile
+        const idx = this.discardPile.findIndex(c => c.id === selectedCard.id);
+        if (idx !== -1) {
+          this.discardPile.splice(idx, 1);
+        }
+        // Add to player hand
+        player.addCard(selectedCard);
+        this.addLog(`🎁 Bạn đã lấy lá ${selectedCard.name} từ xấp bài bỏ!`);
+
+        this.isProcessing = false;
+        UI.renderAll();
+        UI.enablePlayerActions();
+      });
+    } else {
+      // AI bot chooses card
+      this.aiResolveFiveCardCombo(player);
+    }
+  },
+
+  aiResolveFiveCardCombo(bot) {
+    if (this.discardPile.length === 0) {
+      this.addLog(`✨ ${bot.name} chơi Combo 5 lá nhưng xấp bài bỏ đang trống!`);
+      this.isProcessing = false;
+      UI.renderAll();
+      return;
+    }
+
+    const priority = [
+      CardType.DEFUSE, CardType.NOPE, CardType.ATTACK, 
+      CardType.SKIP, CardType.SEE_FUTURE, CardType.FAVOR, CardType.SHUFFLE
+    ];
+
+    let chosenCard = null;
+    for (const type of priority) {
+      chosenCard = this.discardPile.find(c => c.type === type);
+      if (chosenCard) break;
+    }
+
+    if (!chosenCard) {
+      const candidates = this.discardPile.filter(c => c.type !== CardType.EXPLODING_KITTEN);
+      if (candidates.length > 0) {
+        chosenCard = candidates[Math.floor(Math.random() * candidates.length)];
+      } else {
+        chosenCard = this.discardPile[0];
+      }
+    }
+
+    if (chosenCard) {
+      const idx = this.discardPile.findIndex(c => c.id === chosenCard.id);
+      if (idx !== -1) {
+        this.discardPile.splice(idx, 1);
+      }
+      bot.addCard(chosenCard);
+      const cardName = CARD_INFO[chosenCard.type]?.name || chosenCard.type;
+      this.addLog(`🤖 ${bot.name} đã lấy lá ${cardName} từ xấp bài bỏ!`);
+    }
+
+    this.isProcessing = false;
+    UI.renderAll();
   },
 
   async resolveCardEffect(card, player, target) {

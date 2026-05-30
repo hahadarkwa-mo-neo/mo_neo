@@ -16,7 +16,8 @@ const CardType = {
   CAT_TACO: 'cat_taco',
   CAT_MELON: 'cat_melon',
   CAT_BEARD: 'cat_beard',
-  CAT_RAINBOW: 'cat_rainbow'
+  CAT_RAINBOW: 'cat_rainbow',
+  FIVE_CARD_COMBO: 'five_card_combo'
 };
 
 // Thông tin hiển thị cho từng loại bài (tiếng Việt)
@@ -32,7 +33,8 @@ const CardInfo = {
   [CardType.CAT_TACO]:         { name: 'Mèo Taco', emoji: '🌮' },
   [CardType.CAT_MELON]:        { name: 'Mèo Dưa Hấu', emoji: '🍉' },
   [CardType.CAT_BEARD]:        { name: 'Mèo Râu', emoji: '🧔' },
-  [CardType.CAT_RAINBOW]:      { name: 'Mèo Cầu Vồng', emoji: '🌈' }
+  [CardType.CAT_RAINBOW]:      { name: 'Mèo Cầu Vồng', emoji: '🌈' },
+  [CardType.FIVE_CARD_COMBO]:  { name: 'Combo 5 Lá', emoji: '✨' }
 };
 
 // Danh sách các loại bài mèo (dùng để kiểm tra pair)
@@ -268,6 +270,21 @@ class ServerGame {
         }
         return {
           type: 'defuse_waiting',
+          playerName: action.playerName
+        };
+
+      case 'discard_picker':
+        if (action.playerId === playerId) {
+          return {
+            type: 'discard_picker',
+            discardPile: this.discardPile.map(c => ({
+              id: c.id,
+              type: c.type
+            }))
+          };
+        }
+        return {
+          type: 'discard_picker_waiting',
           playerName: action.playerName
         };
 
@@ -525,6 +542,39 @@ class ServerGame {
         } else {
           // Ăn cắp 1 lá bài ngẫu nhiên từ mục tiêu
           this.stealRandomCard(player, target);
+        }
+      });
+
+    } else if (cards.length === 5) {
+      // Đánh combo 5 lá khác biệt
+      const types = new Set(cards.map(c => c.type));
+      if (types.size !== 5) {
+        this.emitTo(playerId, 'error_message', { message: '5 lá bài phải hoàn toàn khác loại nhau!' });
+        return;
+      }
+
+      // Xóa 5 lá khỏi tay, thêm vào đống bài bỏ
+      this.removeCardsFromHand(player, cardIds);
+      this.discardPile.push(...cards);
+
+      this.addLog(`✨ ${player.name} đánh Combo 5 lá khác biệt!`);
+
+      this.emitToRoom('card_played', {
+        playerIndex: player.index,
+        playerName: player.name,
+        cardType: CardType.FIVE_CARD_COMBO,
+        cardName: 'Combo 5 Lá',
+        targetName: null
+      });
+
+      // Mở cửa sổ Nope cho Combo 5 lá
+      this.startNopeWindow(CardType.FIVE_CARD_COMBO, player.index, null, (cancelled) => {
+        if (cancelled) {
+          this.addLog(`❌ Combo 5 Lá bị hủy bởi Phản Đối!`);
+          this.broadcastState();
+        } else {
+          // Thực hiện rút bài từ discard pile
+          this.resolveFiveCardCombo(player.index);
         }
       });
 
@@ -1063,6 +1113,79 @@ class ServerGame {
     } else {
       this.startTurn();
     }
+  }
+
+  // ============================================================
+  // XỬ LÝ COMBO 5 LÁ (Discard Pile Picker)
+  // ============================================================
+
+  /**
+   * Bắt đầu chọn bài từ đống bỏ cho Combo 5 lá
+   */
+  resolveFiveCardCombo(playerIndex) {
+    const player = this.players[playerIndex];
+    if (!player || !player.isAlive) return;
+
+    if (this.discardPile.length === 0) {
+      this.addLog(`✨ ${player.name} chơi Combo 5 lá nhưng xấp bài bỏ đang trống!`);
+      this.broadcastState();
+      return;
+    }
+
+    this.addLog(`🎁 ${player.name} đang chọn 1 lá từ xấp bài bỏ...`);
+
+    // Thiết lập hành động chờ
+    this.pendingAction = {
+      type: 'discard_picker',
+      playerId: player.id,
+      playerName: player.name,
+      playerIndex: player.index
+    };
+
+    // Gửi sự kiện yêu cầu chọn bài riêng cho người chơi đó
+    this.emitTo(player.id, 'discard_picker_prompt', {
+      discardPile: this.discardPile.map(c => ({
+        id: c.id,
+        type: c.type
+      }))
+    });
+
+    this.broadcastState();
+  }
+
+  /**
+   * Xử lý khi người chơi chọn lá bài từ xấp bài bỏ
+   */
+  handleDiscardPickerPick(playerId, cardId) {
+    if (!this.pendingAction || this.pendingAction.type !== 'discard_picker') {
+      this.emitTo(playerId, 'error_message', { message: 'Không có yêu cầu chọn bài!' });
+      return;
+    }
+
+    if (this.pendingAction.playerId !== playerId) {
+      this.emitTo(playerId, 'error_message', { message: 'Bạn không phải người chọn bài!' });
+      return;
+    }
+
+    const player = this.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    // Tìm lá bài trong xấp bài bỏ
+    const cardIdx = this.discardPile.findIndex(c => c.id === cardId);
+    if (cardIdx === -1) {
+      this.emitTo(playerId, 'error_message', { message: 'Lá bài không tồn tại trong xấp bài bỏ!' });
+      return;
+    }
+
+    // Rút khỏi xấp bài bỏ và đưa vào tay
+    const card = this.discardPile.splice(cardIdx, 1)[0];
+    player.hand.push(card);
+
+    const cardName = CardInfo[card.type]?.name || card.type;
+    this.addLog(`🎁 ${player.name} đã lấy lá ${cardName} từ xấp bài bỏ!`);
+
+    this.pendingAction = null;
+    this.broadcastState();
   }
 
   // ============================================================
