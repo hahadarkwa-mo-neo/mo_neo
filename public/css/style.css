@@ -1119,6 +1119,7 @@ input[type="range"]::-moz-range-thumb {
   height: var(--card-height);
   border-radius: var(--card-radius);
   position: relative;
+  z-index: 10;
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   box-shadow: var(--shadow-card);
@@ -1144,7 +1145,7 @@ input[type="range"]::-moz-range-thumb {
   .card:hover {
     transform: translateY(-6px);
     box-shadow: var(--shadow-card), 0 8px 20px rgba(255, 255, 255, 0.08);
-    z-index: 100;
+    z-index: 120 !important;
     border-color: rgba(255, 255, 255, 0.3);
   }
 
@@ -1194,7 +1195,7 @@ input[type="range"]::-moz-range-thumb {
   transform: translateY(-20px) scale(1.05) !important;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(0, 255, 136, 0.35) !important;
   border-color: var(--neon-green) !important;
-  z-index: 101 !important;
+  z-index: 150 !important;
 }
 
 .card.selected::after {
@@ -2803,7 +2804,8 @@ input[type="range"]::-moz-range-thumb {
     padding-bottom: calc(1vmin + var(--safe-bottom)) !important;
   }
   #hand-cards {
-    padding: 3vmin 2.5vmin 1.5vmin 2.5vmin !important;
+    padding: 7vmin 2.5vmin 1.5vmin 2.5vmin !important; /* Increased top padding from 3vmin to 7vmin to prevent top clipping */
+    margin-top: -3.5vmin !important; /* Offset visual position downwards so cards stay at same visual height */
     overflow-x: auto !important;
     overflow-y: visible !important;
     justify-content: flex-start !important;
@@ -2816,6 +2818,8 @@ input[type="range"]::-moz-range-thumb {
     flex-shrink: 0 !important;
     margin-left: -3.5vmin !important;
     scroll-snap-align: center !important;
+    position: relative !important;
+    z-index: 10 !important; /* Ensure base cards have clean layers */
   }
   #hand-cards .card:first-child { margin-left: 0 !important; }
 
@@ -2873,6 +2877,7 @@ input[type="range"]::-moz-range-thumb {
   .card.selected {
     transform: translateY(-3.5vmin) scale(1.05) !important;
     box-shadow: 0 1.2vmin 3vmin rgba(0, 0, 0, 0.5), 0 0 2vmin rgba(0, 255, 136, 0.4) !important;
+    z-index: 150 !important;
   }
   .card.selected::after {
     display: none !important; /* Hide cluttered text checkmark on small mobile cards */
