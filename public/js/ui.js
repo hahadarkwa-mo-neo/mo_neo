@@ -389,100 +389,146 @@ const UI = {
         }
       }
 
-      // Tap to select/deselect OR Double-tap to play
-      el.onclick = (e) => {
-        e.stopPropagation();
-        if (this._longPressTriggered) {
-          this._longPressTriggered = false;
-          return;
+      // Gesture state variables
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let currentX = 0;
+      let currentY = 0;
+      let dragThreshold = 8; // min drag to lock drag state
+      let playThreshold = -80; // drag 80px upwards to play
+
+      // Drag action handlers
+      const onDragStart = (clientX, clientY) => {
+        if (!Game.currentPlayer.isHuman || Game.isProcessing) return;
+        startX = clientX;
+        startY = clientY;
+        currentX = 0;
+        currentY = 0;
+        isDragging = false;
+        
+        // Start long press timer
+        this._longPressTriggered = false;
+        this._longPressTimer = setTimeout(() => {
+          if (!isDragging) {
+            this._longPressTriggered = true;
+            this.haptic(15);
+            this.showCardPreview(card);
+          }
+        }, 500);
+      };
+
+      const onDragMove = (clientX, clientY, event) => {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Cancel long press preview if dragged past threshold
+        if (dist > dragThreshold) {
+          clearTimeout(this._longPressTimer);
         }
 
-        if (!Game.currentPlayer.isHuman || Game.isProcessing) return;
+        // Lock drag state if swiped vertical upwards
+        if (!isDragging && dy < -dragThreshold && Math.abs(dy) > Math.abs(dx)) {
+          isDragging = true;
+          el.style.transition = 'none';
+          el.style.zIndex = '1000';
+        }
 
-        const now = Date.now();
-        if (this._lastTapCardId === card.id && (now - this._lastTapTime) < 300) {
-          // Double tap quick play
-          this._lastTapCardId = null;
-          this._lastTapTime = 0;
+        if (isDragging) {
+          currentX = dx;
+          currentY = dy;
+          
+          // Damp down pull offsets
+          if (currentY > 0) currentY = currentY * 0.2; 
+          
+          // Animate card following cursor/finger
+          el.style.transform = `translate(${currentX}px, ${currentY}px) scale(1.08) rotate(${currentX * 0.05}deg)`;
 
-          const isSinglePlayable = [
-            CardType.SKIP, CardType.ATTACK, CardType.SEE_FUTURE,
-            CardType.SHUFFLE, CardType.FAVOR
-          ].includes(card.type);
-
-          const isCat = isCatCard(card.type);
-
-          if (isSinglePlayable) {
-            this.haptic(30);
-            Game.selectedCards = [card.id];
-            Game.playSelectedCards();
-          } else if (isCat) {
-            // Find another cat of the same type in hand
-            const match = player.hand.find(c => c.id !== card.id && c.type === card.type);
-            if (match) {
-              this.haptic(30);
-              Game.selectedCards = [card.id, match.id];
-              Game.playSelectedCards();
-            } else {
-              // Shake card if no match
-              this.haptic([50, 30, 50]);
-              el.classList.add('shake-invalid');
-              setTimeout(() => el.classList.remove('shake-invalid'), 400);
-            }
+          // Visual drop indicator
+          if (currentY < playThreshold) {
+            el.classList.add('ready-to-drop');
+            this.els.discardArea.classList.add('drop-zone-highlight');
           } else {
-            // Not playable (Defuse, Nope, EK) -> Shake card
-            this.haptic([50, 30, 50]);
-            el.classList.add('shake-invalid');
-            setTimeout(() => el.classList.remove('shake-invalid'), 400);
+            el.classList.remove('ready-to-drop');
+            this.els.discardArea.classList.remove('drop-zone-highlight');
           }
-        } else {
-          // First tap: Select/Deselect card
-          this._lastTapCardId = card.id;
-          this._lastTapTime = now;
-          this.haptic(10);
-          Sounds.click();
-          Game.selectCard(card.id);
+
+          if (event && event.cancelable) event.preventDefault();
         }
       };
 
-      // Long press to preview (mobile) - refined with scroll check
-      let touchStartX = 0;
-      let touchStartY = 0;
-      el.addEventListener('touchstart', (e) => {
-        this._longPressTriggered = false;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
+      const onDragEnd = () => {
+        clearTimeout(this._longPressTimer);
 
-        this._longPressTimer = setTimeout(() => {
-          this._longPressTriggered = true;
-          this.haptic(15);
-          this.showCardPreview(card);
-        }, 500);
+        if (isDragging) {
+          isDragging = false;
+          el.classList.remove('ready-to-drop');
+          this.els.discardArea.classList.remove('drop-zone-highlight');
+
+          if (currentY < playThreshold) {
+            // Play card
+            Game.selectedCards = [card.id];
+            if (Game.canPlaySelected()) {
+              this.haptic(30);
+              Game.playSelectedCards();
+            } else {
+              // Invalid card play (cat cards, nope, defuse, etc.)
+              this.haptic([50, 30, 50]);
+              el.classList.add('shake-invalid');
+              setTimeout(() => el.classList.remove('shake-invalid'), 400);
+              
+              // Reset transform
+              el.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
+              el.style.transform = '';
+              el.style.zIndex = '';
+            }
+          } else {
+            // Snap back
+            el.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.4, 1)';
+            el.style.transform = '';
+            el.style.zIndex = '';
+          }
+        } else {
+          // It was a simple click/tap!
+          if (!this._longPressTriggered) {
+            this.haptic(10);
+            Sounds.click();
+            Game.selectCard(card.id);
+          }
+        }
+      };
+
+      // Bind Mouse Events
+      el.addEventListener('mousedown', (e) => {
+        onDragStart(e.clientX, e.clientY);
+        
+        const onMouseMove = (moveEvent) => onDragMove(moveEvent.clientX, moveEvent.clientY, moveEvent);
+        const onMouseUp = () => {
+          onDragEnd();
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        window.addEventListener('mousemove', onMouseMove, { passive: false });
+        window.addEventListener('mouseup', onMouseUp);
+      });
+
+      // Bind Touch Events
+      el.addEventListener('touchstart', (e) => {
+        onDragStart(e.touches[0].clientX, e.touches[0].clientY);
       }, { passive: true });
 
       el.addEventListener('touchmove', (e) => {
-        if (this._longPressTriggered) {
-          if (e.cancelable) e.preventDefault();
-          return;
-        }
-
-        // Calculate distance moved
-        const dx = e.touches[0].clientX - touchStartX;
-        const dy = e.touches[0].clientY - touchStartY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        // If user drags/scrolls > 10px, cancel the long press preview
-        if (dist > 10) {
-          clearTimeout(this._longPressTimer);
-        }
+        onDragMove(e.touches[0].clientX, e.touches[0].clientY, e);
       }, { passive: false });
 
       el.addEventListener('touchend', () => {
-        clearTimeout(this._longPressTimer);
+        onDragEnd();
       });
 
       el.addEventListener('touchcancel', () => {
-        clearTimeout(this._longPressTimer);
+        onDragEnd();
       });
 
       // Stagger animation
@@ -573,24 +619,28 @@ const UI = {
     if (Game.gameMode !== 'online') {
       const ekCount = Game.deck.filter(c => c.type === CardType.EXPLODING_KITTEN).length;
       const dangerLevel = count > 0 ? ekCount / count : 0;
-      if (dangerLevel > 0.5) {
-        deckEl.classList.add('danger-high', 'danger-extreme');
-        const dt = document.createElement('div');
-        dt.className = 'danger-text high';
-        dt.textContent = '⚠️ Rất nguy hiểm!';
-        deckEl.parentElement?.appendChild(dt);
-      } else if (dangerLevel > 0.3) {
-        deckEl.classList.add('danger-high');
-        const dt = document.createElement('div');
-        dt.className = 'danger-text high';
-        dt.textContent = '⚠️ Nguy hiểm!';
-        deckEl.parentElement?.appendChild(dt);
-      } else if (dangerLevel > 0.15) {
-        deckEl.classList.add('danger-medium');
-        const dt = document.createElement('div');
-        dt.className = 'danger-text medium';
-        dt.textContent = '⚠ Cẩn thận...';
-        deckEl.parentElement?.appendChild(dt);
+
+      // Refined thresholds: Only show warnings if the deck is thin (<= 4 cards)
+      if (count <= 4) {
+        if (dangerLevel > 0.5) {
+          deckEl.classList.add('danger-high', 'danger-extreme');
+          const dt = document.createElement('div');
+          dt.className = 'danger-text high';
+          dt.textContent = '⚠️ Rất nguy hiểm!';
+          deckEl.parentElement?.appendChild(dt);
+        } else if (dangerLevel > 0.35) {
+          deckEl.classList.add('danger-high');
+          const dt = document.createElement('div');
+          dt.className = 'danger-text high';
+          dt.textContent = '⚠️ Nguy hiểm!';
+          deckEl.parentElement?.appendChild(dt);
+        } else if (dangerLevel > 0.22) {
+          deckEl.classList.add('danger-medium');
+          const dt = document.createElement('div');
+          dt.className = 'danger-text medium';
+          dt.textContent = '⚠ Cẩn thận...';
+          deckEl.parentElement?.appendChild(dt);
+        }
       }
     }
   },

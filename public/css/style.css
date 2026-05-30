@@ -1180,10 +1180,10 @@ input[type="range"]::-moz-range-thumb {
 
 /* Selected state - identical on desktop and mobile */
 .card.selected {
-  transform: scale(1.05);
-  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4), 0 0 24px rgba(0, 255, 136, 0.15);
-  border-color: var(--neon-green);
-  z-index: 101;
+  transform: translateY(-20px) scale(1.05) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(0, 255, 136, 0.35) !important;
+  border-color: var(--neon-green) !important;
+  z-index: 101 !important;
 }
 
 .card.selected::after {
@@ -2842,6 +2842,15 @@ input[type="range"]::-moz-range-thumb {
     padding: 2.2vmin 4.5vmin !important;
     font-size: 3.2vmin !important;
   }
+
+  /* ---- Proportional Card Selection Polish ---- */
+  .card.selected {
+    transform: translateY(-3.5vmin) scale(1.05) !important;
+    box-shadow: 0 1.2vmin 3vmin rgba(0, 0, 0, 0.5), 0 0 2vmin rgba(0, 255, 136, 0.4) !important;
+  }
+  .card.selected::after {
+    display: none !important; /* Hide cluttered text checkmark on small mobile cards */
+  }
 }
 
 /* ============================================================
@@ -3122,6 +3131,22 @@ input[type="range"]::-moz-range-thumb {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(2deg); }
   75% { transform: rotate(-2deg); }
+}
+
+/* ============================================================
+   DRAG AND DROP VISUAL HIGHLIGHTS
+   ============================================================ */
+.card.ready-to-drop {
+  box-shadow: 0 0 25px var(--neon-green), 0 0 50px rgba(0, 255, 136, 0.3) !important;
+  border-color: var(--neon-green) !important;
+}
+
+#discard-pile.drop-zone-highlight {
+  border-color: var(--neon-green) !important;
+  background: rgba(0, 255, 136, 0.05) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3) !important;
+  transform: scale(1.05);
+  transition: all var(--transition-fast);
 }
 
 
