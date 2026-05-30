@@ -1177,6 +1177,12 @@ class ServerGame {
       return;
     }
 
+    const cardToPick = this.discardPile[cardIdx];
+    if (cardToPick.type === CardType.EXPLODING_KITTEN) {
+      this.emitTo(playerId, 'error_message', { message: 'Không thể chọn lá Mèo Nổ!' });
+      return;
+    }
+
     // Rút khỏi xấp bài bỏ và đưa vào tay
     const card = this.discardPile.splice(cardIdx, 1)[0];
     player.hand.push(card);

@@ -263,8 +263,7 @@ const Game = {
       }
     }
 
-    UI.renderHand();
-    UI.updateActionButtons();
+    UI.updateCardSelectionStates();
   },
 
   canPlaySelected() {

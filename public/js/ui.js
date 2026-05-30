@@ -494,10 +494,39 @@ const UI = {
     container.onclick = (e) => {
       if (e.target === container && Game.selectedCards.length > 0) {
         Game.selectedCards = [];
-        UI.renderHand();
-        UI.updateActionButtons();
+        UI.updateCardSelectionStates();
       }
     };
+  },
+
+  updateCardSelectionStates() {
+    const player = this.getMyPlayer();
+    if (!player || !player.isAlive) return;
+
+    const cardElements = this.els.handCards.querySelectorAll('.card');
+    cardElements.forEach(el => {
+      const cardId = el.dataset.cardId;
+      const isSelected = Game.selectedCards.includes(cardId);
+      
+      // Update selected class
+      if (isSelected) {
+        el.classList.add('selected');
+      } else {
+        el.classList.remove('selected');
+      }
+
+      // Combo hint - highlight matching cat cards
+      el.classList.remove('combo-hint');
+      if (Game.selectedCards.length === 1 && !isSelected) {
+        const selectedCard = player.hand.find(c => c.id === Game.selectedCards[0]);
+        const card = player.hand.find(c => c.id === cardId);
+        if (selectedCard && card && isCatCard(selectedCard.type) && card.type === selectedCard.type) {
+          el.classList.add('combo-hint');
+        }
+      }
+    });
+
+    this.updateActionButtons();
   },
 
   createCardElement(card, faceUp = true) {
@@ -1141,16 +1170,18 @@ const UI = {
     list.style.borderRadius = '8px';
     list.style.background = 'rgba(0, 0, 0, 0.2)';
 
-    if (discardPile.length === 0) {
+    const candidates = discardPile.filter(c => c.type !== 'exploding_kitten');
+
+    if (candidates.length === 0) {
       const emptyMsg = document.createElement('div');
       emptyMsg.style.gridColumn = '1 / -1';
       emptyMsg.style.textAlign = 'center';
       emptyMsg.style.padding = '20px';
       emptyMsg.style.color = 'var(--text-muted)';
-      emptyMsg.textContent = 'Không có lá bài nào trong xấp bài bỏ!';
+      emptyMsg.textContent = 'Không có lá bài nào hợp lệ trong xấp bài bỏ!';
       list.appendChild(emptyMsg);
     } else {
-      discardPile.forEach(card => {
+      candidates.forEach(card => {
         const cardBtn = document.createElement('button');
         cardBtn.className = 'card-picker-item';
         cardBtn.style.display = 'flex';
@@ -1235,16 +1266,18 @@ const UI = {
     list.style.borderRadius = '8px';
     list.style.background = 'rgba(0, 0, 0, 0.2)';
 
-    if (discardPile.length === 0) {
+    const candidates = discardPile.filter(c => c.type !== 'exploding_kitten');
+
+    if (candidates.length === 0) {
       const emptyMsg = document.createElement('div');
       emptyMsg.style.gridColumn = '1 / -1';
       emptyMsg.style.textAlign = 'center';
       emptyMsg.style.padding = '20px';
       emptyMsg.style.color = 'var(--text-muted)';
-      emptyMsg.textContent = 'Không có lá bài nào trong xấp bài bỏ!';
+      emptyMsg.textContent = 'Không có lá bài nào hợp lệ trong xấp bài bỏ!';
       list.appendChild(emptyMsg);
     } else {
-      discardPile.forEach(card => {
+      candidates.forEach(card => {
         const info = CARD_INFO[card.type] || { name: card.type, emoji: '🃏', gradient: ['#3a3a3a', '#1a1a1a'] };
         const cardBtn = document.createElement('button');
         cardBtn.className = 'card-picker-item';
