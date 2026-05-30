@@ -146,11 +146,11 @@ const Network = {
 
     s.on('player_left', (data) => {
       console.log('[Network] Người chơi rời:', data.playerId);
-      UI.updateWaitingRoom(data);
-      // If host left and we're new host
-      if (data.newHostId === this.myPlayerId) {
-        this.isHost = true;
+      // If host left and we're new host, update status immediately before drawing
+      if (data.newHostId) {
+        this.isHost = (data.newHostId === this.myPlayerId);
       }
+      UI.updateWaitingRoom(data);
     });
 
     s.on('player_ready', (data) => {

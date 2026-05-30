@@ -1778,27 +1778,50 @@ const UI = {
 
   updateWaitingRoom(data) {
     const list = this.els.waitingPlayerList;
-    if (!list || !data.players) return;
+    if (!list || !data) return;
+
+    // Resolve room and players from nested or flat payload
+    const room = data.room || data;
+    const players = data.players || (room && room.players);
+    const hostId = room ? room.hostId : null;
+    if (!players) return;
+
+    // Dynamically synchronize host status before rendering
+    if (hostId && typeof Network !== 'undefined') {
+      Network.isHost = (hostId === Network.myPlayerId);
+    }
 
     list.innerHTML = '';
-    data.players.forEach(p => {
+    players.forEach(p => {
       const item = document.createElement('div');
       const isMe = p.id === Network.myPlayerId;
-      item.className = `player-item ${p.isReady ? 'ready' : ''} ${isMe ? 'is-me' : ''}`;
+      const isReady = p.ready !== undefined ? p.ready : p.isReady;
+      const isHost = p.id === hostId || p.isHost;
+
+      item.className = `player-item ${isReady ? 'ready' : ''} ${isMe ? 'is-me' : ''} ${isHost ? 'is-host' : ''}`;
       item.innerHTML = `
         <span class="pi-avatar">${p.avatar || '😺'}</span>
-        <span class="pi-name">${p.name}${p.isHost ? ' 👑' : ''}${isMe ? ' (Bạn)' : ''}</span>
-        <span class="pi-status">${p.isReady ? '✅ Sẵn sàng' : '⏳ Chưa sẵn sàng'}</span>
+        <span class="pi-name">${p.name}${isHost ? ' <span class="host-crown">👑</span>' : ''}${isMe ? ' (Bạn)' : ''}</span>
+        <span class="pi-status">${isHost ? '👑 Chủ phòng' : (isReady ? '✅ Sẵn sàng' : '⏳ Chưa sẵn sàng')}</span>
       `;
       list.appendChild(item);
     });
 
-    // Show start button for host only
-    const allReady = data.players.every(p => p.isReady);
-    const enoughPlayers = data.players.length >= 2;
+    // Check game start conditions:
+    // 1. All guest players (non-hosts) must be ready
+    // 2. Minimum 2 players required to begin
+    const guests = players.filter(p => p.id !== hostId);
+    const allGuestsReady = guests.every(p => p.ready || p.isReady);
+    const enoughPlayers = players.length >= 2;
+
     if (this.els.startOnlineBtn) {
       this.els.startOnlineBtn.style.display = Network.isHost ? '' : 'none';
-      this.els.startOnlineBtn.disabled = !(allReady && enoughPlayers);
+      this.els.startOnlineBtn.disabled = !(allGuestsReady && enoughPlayers);
+    }
+
+    // Update ready button display logic for host (host doesn't need to ready up)
+    if (this.els.readyBtn) {
+      this.els.readyBtn.style.display = Network.isHost ? 'none' : '';
     }
   },
 

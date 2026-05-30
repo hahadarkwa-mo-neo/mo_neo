@@ -3210,4 +3210,32 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* ============================================================
+   WAITING ROOM HOST SPECIAL EFFECTS & CROWN ANIMATION
+   ============================================================ */
+.host-crown {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 14px;
+  animation: crownPulse 2s ease-in-out infinite;
+}
+
+@keyframes crownPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));
+  }
+  50% {
+    transform: scale(1.15) rotate(5deg);
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+  }
+}
+
+.player-item.is-host {
+  border-color: rgba(255, 215, 0, 0.25) !important;
+  background: rgba(255, 215, 0, 0.04) !important;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.08);
+}
+
+
 

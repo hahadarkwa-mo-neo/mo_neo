@@ -159,28 +159,36 @@ class RoomManager {
     this.socketToRoom.delete(socket.id);
     socket.leave(code);
 
-    // Nếu chủ phòng rời → hủy phòng
+    // Nếu chủ phòng rời → chuyển host cho người tiếp theo (Host Migration)
     if (room.hostId === socket.id) {
-      // Thông báo cho tất cả người còn lại
-      this.io.to(code).emit('room_destroyed', {
-        message: 'Chủ phòng đã rời, phòng bị giải tán!'
-      });
+      if (room.players.length > 0) {
+        const newHost = room.players[0];
+        room.hostId = newHost.id;
+        // Chủ phòng mới tự động được đặt làm ready: true hoặc false tùy ý (thường không cần ready vì là host)
+        newHost.ready = true; 
 
-      // Xóa mapping cho tất cả người chơi còn lại
-      room.players.forEach(p => {
-        this.socketToRoom.delete(p.id);
-        const memberSocket = this.io.sockets.sockets.get(p.id);
-        if (memberSocket) memberSocket.leave(code);
-      });
+        // Cập nhật lại index cho người chơi còn lại
+        room.players.forEach((p, i) => { p.index = i; });
 
-      // Dọn dẹp game nếu đang chơi
-      if (room.game) {
-        room.game.cleanup();
+        // Thông báo cho tất cả người còn lại biết chủ cũ rời và chuyển host
+        this.io.to(code).emit('player_left', {
+          playerId: socket.id,
+          playerName,
+          newHostId: room.hostId,
+          room: this.sanitizeRoom(room)
+        });
+
+        console.log(`[PHÒNG] Chủ phòng ${playerName} rời phòng ${code}. Chuyển quyền chủ phòng cho ${newHost.name}`);
+        return;
+      } else {
+        // Không còn ai trong phòng → hủy phòng
+        if (room.game) {
+          room.game.cleanup();
+        }
+        this.rooms.delete(code);
+        console.log(`[PHÒNG] Phòng ${code} bị hủy (không còn ai và chủ phòng rời)`);
+        return;
       }
-
-      this.rooms.delete(code);
-      console.log(`[PHÒNG] Phòng ${code} bị hủy (chủ phòng ${playerName} rời)`);
-      return;
     }
 
     // Cập nhật lại index cho người chơi còn lại
